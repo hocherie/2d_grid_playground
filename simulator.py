@@ -14,7 +14,7 @@ from bresenham import bresenham
 MAX_RANGE = 1000
 
 class Robot():
-    def __init__(self, map1, lidar=None):
+    def __init__(self, map1, lidar=None, pos_cont=None):
         self.x = 25
         self.y = 0
         self.map = map1
@@ -24,6 +24,12 @@ class Robot():
             self.lidar = LidarSimulator(map1)
         else:
             self.lidar = lidar
+
+        # TODO: cleaner way?
+        if pos_cont is None:
+            self.pos_cont = PositionController()
+        else:
+            self.pos_cont = pos_cont
     
     def visualize_robot(self):
         plt.plot(self.x, self.y, "*r")
@@ -34,13 +40,17 @@ class Robot():
         self.lidar.visualize_lidar((self.x, self.y))
 
     def move(self):
-        self.y += 1
+        self.x += self.pos_cont.u_x
+        self.y += self.pos_cont.u_y
+        print(self.x, self.y)
 
     def update(self):
         """Moves robot and updates sensor readings"""
 
+        self.pos_cont.calc_control()
         self.move()
         self.lidar.update_reading((self.x, self.y))
+        
 
 
 class Map():
@@ -57,18 +67,20 @@ class Map():
         plt.axis([0, self.width, 0, self.height])
 
 
-# class PositionController():
-#     # def __init__(self):
-#     #     self.
+class PositionController():
+    def __init__(self):
+        self.u_x = 0
+        self.u_y = 0
 
-#     def calc_input(self):
+    def calc_control(self):
+        self.u_x = 1
+        self.u_y = random.randint(-3, 3)
 
 
 class LidarSimulator():
     def __init__(self, map1, angles=np.array(range(10)) * 33):
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
-        # self.frame_pairs  = frame_pairs # coordinates of corners
         self.map = map1 #TODO: move to robot?
         self.sensed_obs = None 
         self.ranges = None
