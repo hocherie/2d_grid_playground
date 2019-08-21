@@ -14,15 +14,28 @@ from bresenham import bresenham
 MAX_RANGE = 1000
 
 class Robot():
-    def __init__(self):
+    def __init__(self, lidar):
         self.x = 25
         self.y = 0
+        self.lidar = lidar
     
     def visualize_robot(self):
         plt.plot(self.x, self.y, "*r")
+    
+    def visualize(self):
+        """Visualizes robot and lidar"""
+        self.visualize_robot()
+        self.lidar.visualize_lidar((self.x, self.y))
 
     def move(self):
         self.y += 1
+
+    def update(self):
+        """Moves robot and updates sensor readings"""
+
+        self.move()
+        self.lidar.update_reading((self.x, self.y))
+
 
 class Map():
     def __init__(self, src_path_map):
@@ -44,13 +57,19 @@ class Map():
         # plt.draw()
         # plt.pause(1.0)
 
+# class PositionController():
+#     # def __init__(self):
+#     #     self.
 
-class LidarSim():
+#     def calc_input(self):
+
+
+class LidarSimulator():
     def __init__(self, angles, map1):
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
         # self.frame_pairs  = frame_pairs # coordinates of corners
-        self.map = map1
+        self.map = map1 #todo move to robot?
         self.sensed_obs = None 
         self.ranges = None
 
@@ -118,13 +137,6 @@ def main():
     print("start!!")
 
     print("done!!")
-    # src_path_map = "map.dat"
-    # map1 = Map(src_path_map)
-    # map1.visualize_map()
-
-    # lidar_sim = LidarSim()
-    # pts = lidar_sim.get_bresenham_points((0,0), (0,4))
-    # print(pts)
 
 if __name__ == '__main__':
     main()
