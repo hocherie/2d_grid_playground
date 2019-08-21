@@ -14,10 +14,16 @@ from bresenham import bresenham
 MAX_RANGE = 1000
 
 class Robot():
-    def __init__(self, lidar):
+    def __init__(self, map1, lidar=None):
         self.x = 25
         self.y = 0
-        self.lidar = lidar
+        self.map = map1
+
+        # TODO: cleaner way?
+        if lidar is None:
+            self.lidar = LidarSimulator(map1)
+        else:
+            self.lidar = lidar
     
     def visualize_robot(self):
         plt.plot(self.x, self.y, "*r")
@@ -47,15 +53,9 @@ class Map():
             str(self.width) + "and height " + str(self.height))
 
     def visualize_map(self):
-        # fig = plt.figure()
-        # plt.switch_backend('TkAgg')
-        # mng = plt.get_current_fig_manager()
-        # mng.resize(*mng.window.maxsize())
-        # plt.ion()
         plt.imshow(self.map, cmap='Greys')
         plt.axis([0, self.width, 0, self.height])
-        # plt.draw()
-        # plt.pause(1.0)
+
 
 # class PositionController():
 #     # def __init__(self):
@@ -65,11 +65,11 @@ class Map():
 
 
 class LidarSimulator():
-    def __init__(self, angles, map1):
+    def __init__(self, map1, angles=np.array(range(10)) * 33):
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
         # self.frame_pairs  = frame_pairs # coordinates of corners
-        self.map = map1 #todo move to robot?
+        self.map = map1 #TODO: move to robot?
         self.sensed_obs = None 
         self.ranges = None
 

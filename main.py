@@ -11,15 +11,13 @@ def main():
 
     
     # load map
-    src_path_map = "data/blank_hallway.dat"
+    src_path_map = "data/single_obs.dat"
     map1 = Map(src_path_map)
 
-    # initialize lidar
-    lidar_angles = np.array(range(10)) * 30
-    lidar = LidarSimulator(lidar_angles, map1)
+    # lidar = LidarSimulator(map1)
 
-    # initialize robot
-    robbie = Robot(lidar)
+    # initialize robot (initializes lidar with map) 
+    robbie = Robot(map1)
 
     for i in range(100):
         print("Time " + str(i))
