@@ -19,6 +19,8 @@ class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None):
         self.x = 50
         self.y = 10
+        self.hist_x = []
+        self.hist_y = [] 
         self.map = map1
 
         # TODO: cleaner way?
@@ -35,6 +37,7 @@ class Robot():
     
     def visualize_robot(self):
         plt.plot(self.x, self.y, "*r")
+        plt.plot(self.hist_x, self.hist_y, ".")
     
     def visualize(self):
         """Visualizes robot and lidar"""
@@ -43,9 +46,12 @@ class Robot():
         self.pos_cont.visualize_control((self.x, self.y))
 
     def move(self):
+        self.hist_x.append(self.x)
+        self.hist_y.append(self.y)
         self.x += self.pos_cont.u_x
         self.y += self.pos_cont.u_y
-        print(self.x, self.y)
+        # print(self.x, self.y)
+        
 
     def update(self):
         """Moves robot and updates sensor readings"""
@@ -112,8 +118,8 @@ class PositionController():
             unsafe_angle = self.lidar.angles[min_angle_ind]
 
             # TODO: cast to int
-            safe_ux = int((SAFE_RANGE - min_range) * np.cos(unsafe_angle + np.pi))
-            safe_uy = int((SAFE_RANGE - min_range) *
+            safe_ux = int((SAFE_RANGE - min_range)//10 * np.cos(unsafe_angle + np.pi))
+            safe_uy = int((SAFE_RANGE - min_range)//10 *
                           np.sin(unsafe_angle + np.pi))
             print("Executing safety maneuvers", safe_ux, safe_uy)
         
