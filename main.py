@@ -1,3 +1,4 @@
+
 from simulator import Map, LidarSimulator, Robot
 import numpy as np
 import matplotlib.pyplot as plt
