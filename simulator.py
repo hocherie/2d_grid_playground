@@ -12,11 +12,13 @@ import random
 from bresenham import bresenham
 
 MAX_RANGE = 1000
+DISPSCALE = 5
+SAFE_RANGE = 30
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None):
-        self.x = 25
-        self.y = 0
+        self.x = 50
+        self.y = 10
         self.map = map1
 
         # TODO: cleaner way?
@@ -27,7 +29,7 @@ class Robot():
 
         # TODO: cleaner way?
         if pos_cont is None:
-            self.pos_cont = PositionController()
+            self.pos_cont = PositionController(self.lidar)
         else:
             self.pos_cont = pos_cont
     
@@ -38,6 +40,7 @@ class Robot():
         """Visualizes robot and lidar"""
         self.visualize_robot()
         self.lidar.visualize_lidar((self.x, self.y))
+        self.pos_cont.visualize_control((self.x, self.y))
 
     def move(self):
         self.x += self.pos_cont.u_x
@@ -47,9 +50,10 @@ class Robot():
     def update(self):
         """Moves robot and updates sensor readings"""
 
+        self.lidar.update_reading((self.x, self.y))
         self.pos_cont.calc_control()
         self.move()
-        self.lidar.update_reading((self.x, self.y))
+        
         
 
 
@@ -68,13 +72,73 @@ class Map():
 
 
 class PositionController():
-    def __init__(self):
+    def __init__(self, lidar):
         self.u_x = 0
         self.u_y = 0
+        self.og_control = None
+        self.safe_control = None
+        self.lidar = lidar
 
     def calc_control(self):
-        self.u_x = 1
-        self.u_y = random.randint(-3, 3)
+        og_control = self.calc_original_control()
+        safe_control = self.calc_safe_control()
+        self.u_x = self.og_control[0] + self.safe_control[0]
+        self.u_y = self.og_control[1] + self.safe_control[1]
+
+    # no account for safety
+    # TODO: give better name
+    def calc_original_control(self):
+        og_ux = 0
+        og_uy = 1
+        self.og_control = (og_ux, og_uy)
+        # return (og_ux, og_uy)
+
+    def calc_safe_control(self):
+        # Naive: choose minimum distance and push away. should have equilibrium point when at stopping limit
+        # min_angle_ind = np.argmin(self.lidar.ranges)
+        # self.lidar.reset_unsafe_range()
+        # self.lidar.unsafe_range[min_angle_ind] = 1
+
+        min_angle_ind = np.argmin(self.lidar.ranges)
+        # print(min_angle_ind)
+        # print(self.lidar.ranges)
+        min_range = np.min(self.lidar.ranges)
+        
+        if min_range < SAFE_RANGE:
+            self.lidar.reset_unsafe_range()
+            self.lidar.unsafe_range[min_angle_ind] = 1
+
+            # Push away
+            unsafe_angle = self.lidar.angles[min_angle_ind]
+
+            # TODO: cast to int
+            safe_ux = int((SAFE_RANGE - min_range) * np.cos(unsafe_angle + np.pi))
+            safe_uy = int((SAFE_RANGE - min_range) *
+                          np.sin(unsafe_angle + np.pi))
+            print("Executing safety maneuvers", safe_ux, safe_uy)
+        
+        else:
+            safe_ux = 0
+            safe_uy = 0
+
+        self.safe_control = (safe_ux, safe_uy) #TODO
+
+
+
+    def visualize_control(self, pos):
+        # original control
+        plt.plot([pos[0], pos[0]+self.og_control[0] * DISPSCALE],
+                 [pos[1], pos[1]+self.og_control[1] * DISPSCALE], 'g')
+
+        # safe control
+        plt.plot([pos[0], pos[0]+self.safe_control[0] * DISPSCALE],
+                 [pos[1], pos[1]+self.safe_control[1] * DISPSCALE], 'r')
+
+        # final control
+        plt.plot([pos[0], pos[0]+self.u_x * DISPSCALE],
+                 [pos[1], pos[1]+self.u_y * DISPSCALE], 'b')
+        # plt.plot(np.vstack((self.sensed_obs[:, 0], np.ones(len(self.angles)) * pos[0])),
+        #          np.vstack((self.sensed_obs[:, 1], np.ones(len(self.angles)) * pos[1])), 'k', linewidth=0.1)
 
 
 class LidarSimulator():
@@ -84,6 +148,10 @@ class LidarSimulator():
         self.map = map1 #TODO: move to robot?
         self.sensed_obs = None 
         self.ranges = None
+        self.unsafe_range = np.zeros_like(self.angles)
+
+    def reset_unsafe_range(self):
+        self.unsafe_range = np.zeros_like(self.angles)
 
     def get_bresenham_points(self, p1, p2):
         """Get list of coordinates of line (in tuples) from p1 and p2. 
@@ -134,9 +202,19 @@ class LidarSimulator():
             
 
     def visualize_lidar(self, pos):
+        # Plot hits
         plt.plot(self.sensed_obs[:, 0], self.sensed_obs[:, 1], "o")
+
+        # Plot all rays
         plt.plot(np.vstack((self.sensed_obs[:, 0], np.ones(len(self.angles)) * pos[0])),
                  np.vstack((self.sensed_obs[:, 1], np.ones(len(self.angles)) * pos[1])), 'k', linewidth=0.1)
+
+        # Plot unsafe range
+        print(self.unsafe_range)
+        unsafe_obs = self.sensed_obs[np.where(self.unsafe_range)]
+        print(unsafe_obs)
+        plt.plot(np.vstack((unsafe_obs[:,0], np.ones(len(unsafe_obs)) * pos[0])),
+                 np.vstack((unsafe_obs[:, 1], np.ones(len(unsafe_obs)) * pos[1])), 'r', linewidth=0.5)
 
 
 def calc_dist(p1, p2):
