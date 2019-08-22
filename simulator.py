@@ -109,6 +109,7 @@ class PositionController():
         # print(min_angle_ind)
         # print(self.lidar.ranges)
         min_range = np.min(self.lidar.ranges)
+        self.lidar.reset_unsafe_range()
         
         if min_range < SAFE_RANGE:
             self.lidar.reset_unsafe_range()
