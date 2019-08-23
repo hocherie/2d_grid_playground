@@ -27,9 +27,12 @@ def main():
     fig = plt.figure()
     ax = plt.axes(projection='3d')
 
+    hist_x = []
+    hist_y = []
+    hist_z = []
     # Step through simulation
     for t in range(100):
-        # plt.cla()
+        plt.cla()
         # Get control input
         u = calc_control()
 
@@ -49,7 +52,17 @@ def main():
         xdot = xdot + dt * a
         x = x + dt * xdot
         print(x)
+
+        visualize_quad(ax, x, hist_x, hist_y, hist_z)
+
+        hist_x.append(x[0])
+        hist_y.append(x[1])
+        hist_z.append(x[2])
+
+
+def visualize_quad(ax, x, hist_x, hist_y, hist_z):
         ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
+        ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
         ax.set_zlim(0, 20)
         plt.pause(0.1)
 
@@ -86,7 +99,7 @@ def calc_ang_acc(u, omega, I, L, b, k):
         return omegaddot
 
 def calc_control():
-        return np.array([50, 10, 10, 10])*200000
+        return np.array([10, 10, 10, 10])*100000
 
 def omega2thetadot(omega, theta):
         mult_matrix = np.array(
