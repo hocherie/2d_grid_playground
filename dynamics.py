@@ -112,7 +112,7 @@ def calc_acc(u, theta, xdot, m, g, k, kd):
 
     Returns
     -------
-    a : float
+    a : (3, ) np.ndarray #TODO: confirm size
         linear acceleration in inertial frame (m/s^2)
     """
     gravity = np.array([0, 0, -g])
@@ -124,10 +124,37 @@ def calc_acc(u, theta, xdot, m, g, k, kd):
     return a 
 
 def calc_ang_acc(u, omega, I, L, b, k):
+    """Computes angular acceleration (in body frame) given control input, angular velocity vector, inertial matrix.
+    
+    omegaddot = inv(I) * (torque - w x (Iw))
 
+    Parameters
+    ----------
+    u : (4, ) np.ndarray
+        control input #TODO: which unit
+    omega : (3, ) np.ndarray 
+        angular velcoity vector in body frame
+    I : (3, 3) np.ndarray 
+        inertia matrix
+    L : float
+        distance from center of quadcopter to any propellers, to find torque (m).
+    b : float # TODO: description
+    k : float
+        thrust coefficient
+
+
+    Returns
+    -------
+    omegaddot : (3, ) np.ndarray
+        rotational acceleration in body frame #TODO: units
+    """
+    # Calculate torque given control input and physical constants
     tau = calc_torque(u, L, b, k)
+
+    # Calculate body frame angular acceleration using Euler's equation
     omegaddot = np.dot(np.linalg.inv(
         I), (tau - np.cross(omega, np.dot(I, omega))))
+
     return omegaddot
 
 def calc_control():
