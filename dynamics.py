@@ -74,17 +74,47 @@ def visualize_quad(ax, x, hist_x, hist_y, hist_z):
     plt.pause(0.1)
 
 def compute_thrust(u,k):
-    """compute thrust from input and thrust coefficient"""
+    """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
+
+    thrust = k * sum(u)
+    
+    Parameters
+    ----------
+    u : (4, ) np.ndarray
+        control input - (angular velocity)^squared of motors (rad^2/s^2)
+
+    k : float
+        thrust coefficient
+    """
     T = np.array([0, 0, k*np.sum(u)])
 
     return T
 
 def calc_torque(u, L, b, k):
-    """Compute torque, given input, and coefficients"""
+    """Compute torque (body-frame), given control input, and coefficients. Used in calc_ang_acc()
+    
+    Parameters
+    ----------
+    u : (4, ) np.ndarray
+        control input - (angular velocity)^squared of motors (rad^2/s^2)
+    L : float
+        distance from center of quadcopter to any propellers, to find torque (m).
+    
+    b : float # TODO: description
+    
+    k : float
+        thrust coefficient
+
+    Returns
+    -------
+    tau : (3,) np.ndarray
+        torque in body frame (Nm)
+
+    """
     tau = np.array([
             L * k * (u[0]-u[2]),
             L * k * (u[1]-u[3]),
-            b * (u[0]-u[1]+u[2]-u[3])
+            b * (u[0]-u[1] + u[2]-u[3])
     ])
 
     return tau
@@ -96,7 +126,7 @@ def calc_acc(u, theta, xdot, m, g, k, kd):
     Parameters
     ----------
     u : (4, ) np.ndarray
-        control input #TODO: which unit
+        control input - (angular velocity)^squared of motors (rad^2/s^2)
     theta : (3, ) np.ndarray 
         rpy angle in body frame (radian) 
     xdot : (3, ) np.ndarray
@@ -131,7 +161,7 @@ def calc_ang_acc(u, omega, I, L, b, k):
     Parameters
     ----------
     u : (4, ) np.ndarray
-        control input #TODO: which unit
+        control input - (angular velocity)^squared of motors (rad^2/s^2)
     omega : (3, ) np.ndarray 
         angular velcoity vector in body frame
     I : (3, 3) np.ndarray 
@@ -176,11 +206,34 @@ def omega2thetadot(omega, theta):
     return thetadot
 
 def thetadot2omega(thetadot, theta):
+    """Compute angular velocity vector from euler angle and associated rates.
+    
+    Uses Tait Bryan's z-y-x/yaw-pitch-roll. 
+
+    Parameters
+    ----------
+    
+    thetadot: (3, ) np.ndarray
+        time derivative of euler angles (roll rate, pitch rate, yaw rate)
+
+    theta: (3, ) np.ndarray
+        euler angles in body frame (roll, pitch, yaw)
+
+    Returns
+    ---------
+    w: (3, ) np.ndarray
+        angular velocity vector (in body frame)
+    
+    """
+    roll = theta[0]
+    pitch = theta[1]
+    yaw = theta[2]
+
     mult_matrix = np.array(
             [
-            [1, 0, -np.sin(theta[1])],
-            [0, np.cos(theta[0]), np.cos(theta[1])*np.sin(theta[0])],
-            [0, -np.sin(theta[0]), np.cos(theta[1])*np.cos(theta[0])]
+            [1, 0, -np.sin(pitch)],
+            [0, np.cos(roll), np.cos(pitch)*np.sin(roll)],
+            [0, -np.sin(roll), np.cos(pitch)*np.cos(roll)]
             ]
 
     )
