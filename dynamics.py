@@ -1,3 +1,9 @@
+"""dynamics.py
+Simulate Simple Quadrotor Dynamics
+
+`python dynamics.py` to see hovering drone
+"""
+
 import numpy as np
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
@@ -61,6 +67,7 @@ def main():
 
 
 def visualize_quad(ax, x, hist_x, hist_y, hist_z):
+        """Plot quadrotor 3D position and history"""
         ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
         ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
         ax.set_zlim(0, 20)
@@ -82,14 +89,38 @@ def calc_torque(u, L, b, k):
 
         return tau
 
-def calc_acc(u, angles, xdot, m, g, k, kd):
+def calc_acc(u, theta, xdot, m, g, k, kd):
+        """Computes linear acceleration (in inertial frame) given control input, gravity, thrust and drag.
+        a = g + T_b+Fd/m
+
+        Parameters
+        ----------
+        u : (4, ) np.ndarray
+            control input #TODO: which unit
+        theta : (3, ) np.ndarray 
+            rpy angle in body frame (radian) 
+        xdot : (3, ) np.ndarray
+            linear velocity in body frame (m/s), for drag calc 
+        m : float
+            mass of quadrotor (kg)
+        g : float
+            gravitational acceleration (m/s^2)
+        k : float
+            thrust coefficient
+        kd : float
+            drag coefficient
+
+        Returns
+        -------
+        a : float
+            linear acceleration in inertial frame (m/s^2)
+        """
         gravity = np.array([0, 0, -g])
-        R = get_rot_matrix(angles)
+        R = get_rot_matrix(theta)
         thrust = compute_thrust(u, k)
-        print(thrust)
         T = np.dot(R, thrust)
         Fd = -kd * xdot
-        a = gravity + 1//m * T + Fd
+        a = gravity + 1//m * (T + Fd)
         return a 
 
 def calc_ang_acc(u, omega, I, L, b, k):
