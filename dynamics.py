@@ -67,114 +67,115 @@ def main():
 
 
 def visualize_quad(ax, x, hist_x, hist_y, hist_z):
-        """Plot quadrotor 3D position and history"""
-        ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
-        ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
-        ax.set_zlim(0, 20)
-        plt.pause(0.1)
+    """Plot quadrotor 3D position and history"""
+    ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
+    ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
+    ax.set_zlim(0, 20)
+    plt.pause(0.1)
 
 def compute_thrust(u,k):
-        """compute thrust from input and thrust coefficient"""
-        T = np.array([0, 0, k*np.sum(u)])
+    """compute thrust from input and thrust coefficient"""
+    T = np.array([0, 0, k*np.sum(u)])
 
-        return T
+    return T
 
 def calc_torque(u, L, b, k):
-        """Compute torque, given input, and coefficients"""
-        tau = np.array([
-                L * k * (u[0]-u[2]),
-                L * k * (u[1]-u[3]),
-                b * (u[0]-u[1]+u[2]-u[3])
-        ])
+    """Compute torque, given input, and coefficients"""
+    tau = np.array([
+            L * k * (u[0]-u[2]),
+            L * k * (u[1]-u[3]),
+            b * (u[0]-u[1]+u[2]-u[3])
+    ])
 
-        return tau
+    return tau
 
 def calc_acc(u, theta, xdot, m, g, k, kd):
-        """Computes linear acceleration (in inertial frame) given control input, gravity, thrust and drag.
-        a = g + T_b+Fd/m
+    """Computes linear acceleration (in inertial frame) given control input, gravity, thrust and drag.
+    a = g + T_b+Fd/m
 
-        Parameters
-        ----------
-        u : (4, ) np.ndarray
-            control input #TODO: which unit
-        theta : (3, ) np.ndarray 
-            rpy angle in body frame (radian) 
-        xdot : (3, ) np.ndarray
-            linear velocity in body frame (m/s), for drag calc 
-        m : float
-            mass of quadrotor (kg)
-        g : float
-            gravitational acceleration (m/s^2)
-        k : float
-            thrust coefficient
-        kd : float
-            drag coefficient
+    Parameters
+    ----------
+    u : (4, ) np.ndarray
+        control input #TODO: which unit
+    theta : (3, ) np.ndarray 
+        rpy angle in body frame (radian) 
+    xdot : (3, ) np.ndarray
+        linear velocity in body frame (m/s), for drag calc 
+    m : float
+        mass of quadrotor (kg)
+    g : float
+        gravitational acceleration (m/s^2)
+    k : float
+        thrust coefficient
+    kd : float
+        drag coefficient
 
-        Returns
-        -------
-        a : float
-            linear acceleration in inertial frame (m/s^2)
-        """
-        gravity = np.array([0, 0, -g])
-        R = get_rot_matrix(theta)
-        thrust = compute_thrust(u, k)
-        T = np.dot(R, thrust)
-        Fd = -kd * xdot
-        a = gravity + 1//m * (T + Fd)
-        return a 
+    Returns
+    -------
+    a : float
+        linear acceleration in inertial frame (m/s^2)
+    """
+    gravity = np.array([0, 0, -g])
+    R = get_rot_matrix(theta)
+    thrust = compute_thrust(u, k)
+    T = np.dot(R, thrust)
+    Fd = -kd * xdot
+    a = gravity + 1//m * (T + Fd)
+    return a 
 
 def calc_ang_acc(u, omega, I, L, b, k):
-        tau = calc_torque(u, L, b, k)
-        omegaddot = np.dot(np.linalg.inv(
-            I), (tau - np.cross(omega, np.dot(I, omega))))
-        return omegaddot
+
+    tau = calc_torque(u, L, b, k)
+    omegaddot = np.dot(np.linalg.inv(
+        I), (tau - np.cross(omega, np.dot(I, omega))))
+    return omegaddot
 
 def calc_control():
-        return np.array([10, 10, 10, 10])*100000
+    return np.array([10, 10, 10, 10])*100000
 
 def omega2thetadot(omega, theta):
-        mult_matrix = np.array(
-            [
-                [1, 0, -np.sin(theta[1])],
-                [0, np.cos(theta[0]), np.cos(theta[1])*np.sin(theta[0])],
-                [0, -np.sin(theta[0]), np.cos(theta[1])*np.cos(theta[0])]
-            ]
+    mult_matrix = np.array(
+        [
+            [1, 0, -np.sin(theta[1])],
+            [0, np.cos(theta[0]), np.cos(theta[1])*np.sin(theta[0])],
+            [0, -np.sin(theta[0]), np.cos(theta[1])*np.cos(theta[0])]
+        ]
 
-        , dtype='float')
+    , dtype='float')
 
-        mult_inv = np.linalg.inv(mult_matrix)
-        thetadot = np.dot(mult_inv, omega)
+    mult_inv = np.linalg.inv(mult_matrix)
+    thetadot = np.dot(mult_inv, omega)
 
-        return thetadot
+    return thetadot
 
 def thetadot2omega(thetadot, theta):
-        mult_matrix = np.array(
-                [
-                [1, 0, -np.sin(theta[1])],
-                [0, np.cos(theta[0]), np.cos(theta[1])*np.sin(theta[0])],
-                [0, -np.sin(theta[0]), np.cos(theta[1])*np.cos(theta[0])]
-                ]
+    mult_matrix = np.array(
+            [
+            [1, 0, -np.sin(theta[1])],
+            [0, np.cos(theta[0]), np.cos(theta[1])*np.sin(theta[0])],
+            [0, -np.sin(theta[0]), np.cos(theta[1])*np.cos(theta[0])]
+            ]
 
-        )
+    )
 
-        w = np.dot(mult_matrix, thetadot)
+    w = np.dot(mult_matrix, thetadot)
 
-        return w
+    return w
 
 def get_rot_matrix(angles):
-        [phi, theta, psi] = angles
-        cphi = np.cos(phi)
-        sphi = np.sin(phi)
-        cthe = np.cos(theta)
-        sthe = np.sin(theta)
-        cpsi = np.cos(psi)
-        spsi = np.sin(psi)
+    [phi, theta, psi] = angles
+    cphi = np.cos(phi)
+    sphi = np.sin(phi)
+    cthe = np.cos(theta)
+    sthe = np.sin(theta)
+    cpsi = np.cos(psi)
+    spsi = np.sin(psi)
 
-        rot_mat = np.array([[cthe * cpsi, sphi * sthe * cpsi - cphi * spsi, cphi * sthe * cpsi + sphi * spsi],
-                            [cthe * spsi, sphi * sthe * spsi + cphi *
-                                cpsi, cphi * sthe * spsi - sphi * cpsi],
-                            [-sthe,       cthe * sphi,                      cthe * cphi]])
-        return rot_mat
+    rot_mat = np.array([[cthe * cpsi, sphi * sthe * cpsi - cphi * spsi, cphi * sthe * cpsi + sphi * spsi],
+                        [cthe * spsi, sphi * sthe * spsi + cphi *
+                            cpsi, cphi * sthe * spsi - sphi * cpsi],
+                        [-sthe,       cthe * sphi,                      cthe * cphi]])
+    return rot_mat
 
 # def pd_control(state, thetadot):
 #         Kd = 4
