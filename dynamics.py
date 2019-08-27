@@ -25,11 +25,15 @@ def main():
 
 
     # Initialize
-    x = np.array([0,0,10])
+    x = np.array([5,0,10])
     xdot = np.zeros_like(x)
     theta = np.zeros_like(x)
     thetadot = np.zeros_like(x)
     integral = None
+
+    # add noise to sensor?
+    deviation = 300;
+    thetadot = np.radians(2 * deviation * np.random.rand(3,) - deviation)
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -72,6 +76,8 @@ def visualize_quad(ax, x, hist_x, hist_y, hist_z):
     """Plot quadrotor 3D position and history"""
     ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
     ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
+    ax.set_xlim(0,10)
+    ax.set_ylim(0,10)
     ax.set_zlim(0, 20)
     plt.pause(0.1)
 
