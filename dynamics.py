@@ -8,27 +8,28 @@ import numpy as np
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
-
+# Physical constants
+g = 9.81
+m = 0.5
+L = 0.25
+k = 3e-6
+b = 1e-7
+I = np.diag([5e-3, 5e-3, 10e-3])
+kd = 0.25
+dt = 0.01
 
 def main():
     print("start")
 
 
-    # Physical constants
-    g = 9.81
-    m = 0.5
-    L = 0.25
-    k = 3e-6
-    b = 1e-7
-    I = np.diag([5e-3, 5e-3, 10e-3])
-    kd = 0.25
-    dt = 0.01
+
 
     # Initialize
     x = np.array([0,0,10])
     xdot = np.zeros_like(x)
     theta = np.zeros_like(x)
     thetadot = np.zeros_like(x)
+    integral = None
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -40,7 +41,8 @@ def main():
     for t in range(100):
         plt.cla()
         # Get control input
-        u = calc_control()
+        # u = calc_control()
+        u, integral = pd_control(theta, thetadot, integral)
 
         # Compute angular velocity vector from angular velocities
         omega = thetadot2omega(thetadot, theta)
@@ -257,12 +259,49 @@ def get_rot_matrix(angles):
                         [-sthe,       cthe * sphi,                      cthe * cphi]])
     return rot_mat
 
-# def pd_control(state, thetadot):
-#         Kd = 4
-#         Kp = 3
+def pd_control(theta, thetadot, integral=None):
+    Kd = 4
+    Kp = 3
 
-#         # Compute total thrust
-#         tot_thrust = 
+    # Initialize integral. Accumulate to get error in rpy angles
+    if integral is None:
+        integral = np.zeros((3,))
+
+    # Compute total thrust
+    tot_thrust = (m * g) // (k * np.cos(theta[1] * np.cos(theta[0])))
+
+    # Compute errors
+    e = Kd * thetadot + Kp * integral
+
+    # Compute control input
+    u = error2u(e, theta, tot_thrust, m, g, k, b, L, I)
+
+    # Update state
+    integral += dt * thetadot
+
+    return u, integral
+
+def error2u(error, theta, tot_thrust, m, g, k, b, L, I):
+
+    e0 = error[0]
+    e1 = error[1]
+    e2 = error[2]
+    Ixx = I[0,0]
+    Iyy = I[1,1]
+    Izz = I[2,2]
+
+    # rbase = (m*g) // (4*k*np.cos(theta[1])*np.cos(theta[0]))
+    r0 = tot_thrust//4 - (2*b*e0*Ixx + e2*Izz*k*L)//(4*b*k*L)
+
+    r1 = tot_thrust//4 + (e2*Izz)//(4*b) - (e1*Iyy)//(2*k*L)
+
+    r2 = tot_thrust//4 + (2*b*e0*Ixx - e2*Izz*k*L)//(4*b*k*L)
+
+    r3 = tot_thrust//4 + (e2*Izz)//(4*b) + (e1*Iyy)//(2*k*L)
+
+    return np.array([r0, r1, r2, r3])
+
+
 
 if __name__ == '__main__':
     main()
