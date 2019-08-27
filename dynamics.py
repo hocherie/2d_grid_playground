@@ -5,6 +5,7 @@ Simulate Simple Quadrotor Dynamics
 """
 
 import numpy as np
+import numpy.matlib
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
@@ -65,16 +66,30 @@ def main():
         x = x + dt * xdot
         print(x)
 
-        visualize_quad(ax, x, hist_x, hist_y, hist_z)
+        # visualize_quad(ax, x, hist_x, hist_y, hist_z)
+        visualize_quad(ax, x, theta, hist_x, hist_y, hist_z)
 
         hist_x.append(x[0])
         hist_y.append(x[1])
         hist_z.append(x[2])
 
 
-def visualize_quad(ax, x, hist_x, hist_y, hist_z):
+def visualize_quad(ax, x, theta, hist_x, hist_y, hist_z):
     """Plot quadrotor 3D position and history"""
+    R = get_rot_matrix(theta)
+    plot_L = 1
+    quad_ends_body = np.array(
+        [[-plot_L, 0, 0], [plot_L, 0, 0], [0, -plot_L, 0], [0, plot_L, 0], [0, 0, 0], [0, 0, 0]]).T
+    quad_ends_world = np.dot(R, quad_ends_body) + np.matlib.repmat(x, 6, 1).T
+    # Plot Rods
+    ax.plot3D(quad_ends_world[0, 0:2],
+            quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'b')
+    ax.plot3D(quad_ends_world[0, 2:4],
+              quad_ends_world[1, 2:4], quad_ends_world[2, 2:4], 'b')
+    # Plot drone center
     ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
+
+    # Plot history
     ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
     ax.set_xlim(0,10)
     ax.set_ylim(0,10)
