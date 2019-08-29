@@ -61,7 +61,9 @@ def main():
         # ax_error.cla()
         # Get control input
         # u = basic_input()
-        des_theta = np.radians(np.array([-30, 0, 0])) # TODO: hardcoded. should be given by velocity controller
+        des_theta_deg = np.array([-30, 10, 20])
+        # TODO: hardcoded. should be given by velocity controller
+        des_theta = np.radians(des_theta_deg)
         u = pd_attitude_control(theta, thetadot, des_theta)
 
         # Compute angular velocity vector from angular velocities
@@ -86,9 +88,9 @@ def main():
         hist_x.append(x[0])
         hist_y.append(x[1])
         hist_z.append(x[2])
-        hist_theta.append(np.degrees(theta[0]))
-        hist_thetadot.append(np.degrees(thetadot[0]))
-        hist_des_theta.append(0)
+        hist_theta.append(np.degrees(theta))
+        hist_thetadot.append(np.degrees(thetadot))
+        hist_des_theta.append(des_theta_deg)
 
         visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot)
 
@@ -113,7 +115,7 @@ def visualize_quad(ax, x, theta, hist_x, hist_y, hist_z):
     # ax_th_error.
     ax.set_xlim(0,10)
     ax.set_ylim(0,10)
-    ax.set_zlim(0, 20)
+    ax.set_zlim(0, 10)
     plt.pause(0.0000001)
 
 
@@ -121,10 +123,36 @@ def visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_
     # pass
     # ax.plot([0,1], [1,10],'b')
     
-    ax_th_error.plot(np.array(range(len(hist_theta)))*dt, hist_theta)
-    ax_thr_error.plot(np.array(range(len(hist_theta)))*dt, hist_thetadot)
-    
+    # Angle Error
+    ax_th_error.plot(np.array(range(len(hist_theta)))*dt, np.array(hist_theta)[:,0], 'k')
+    ax_th_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_theta)[:, 1], 'b')
+    ax_th_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_theta)[:, 2], 'r')
+    # Desired angle
+    ax_th_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_theta)[:, 0], 'k--')
+    ax_th_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_theta)[:, 1], 'b--')
+    ax_th_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_theta)[:, 2], 'r--')
+    # ax_th_error.plot(np.array(range(len(hist_theta))) *
+                    #  dt, np.array(hist_theta)[:, 2], 'r')
+
+
+    ax_th_error.legend(["Roll", "Pitch", "Yaw"])
+    ax_th_error.set_ylim(-40, 40)
+
+    # Angle Rate
+    ax_thr_error.plot(np.array(range(len(hist_theta))) *
+                      dt, np.array(hist_thetadot)[:, 0], 'k')
+    ax_thr_error.plot(np.array(range(len(hist_theta))) *
+                      dt, np.array(hist_thetadot)[:, 1], 'b')
+    ax_thr_error.plot(np.array(range(len(hist_theta))) *
+                      dt, np.array(hist_thetadot)[:, 2], 'r')
     # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
+    ax_thr_error.legend(["Roll Rate", "Pitch Rate", "Yaw Rate"])
+    ax_thr_error.set_ylim(-40, 40)
     plt.pause(0.00001)
 def compute_thrust(u,k):
     """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
@@ -312,8 +340,14 @@ def get_rot_matrix(angles):
                         [-sthe,       cthe * sphi,                      cthe * cphi]])
     return rot_mat
 
+# def pd_velocity_control():
 def pd_attitude_control(theta, thetadot, des_theta):
-    """Attitude controller (PD)."""
+    """Attitude controller (PD).
+    
+    Parameter
+    ---------
+    
+    """
 
     Kd = 4
     Kp = 3
