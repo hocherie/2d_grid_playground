@@ -17,10 +17,11 @@ k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
-dt = 0.005
+dt = 0.02
 
 hist_theta = []
 hist_des_theta = []
+hist_thetadot = []
 
 def main():
     print("start")
@@ -36,20 +37,22 @@ def main():
     integral = None
 
     # add noise to sensor?
-    # deviation = 300;
+    deviation = 300;
     # thetadot = np.radians(2 * deviation * np.random.rand(3,) - deviation)
     thetadot = np.radians(np.array([10, 0 , 0]))
 
+    # Initialize visualization
     fig = plt.figure()
     ax = fig.add_subplot(1,3,1, projection='3d')
-    # fig2 = plt.figure()
     ax_th_error = fig.add_subplot(1, 3, 2)
     ax_thr_error = fig.add_subplot(1,3,3)
+    # th_err_ani = animation.FuncAnimation(fig, visualize_quad, )
 
     hist_x = []
     hist_y = []
     hist_z = []
-    hist_thetadot = []
+
+    
 
 
     # Step through simulation
@@ -58,7 +61,8 @@ def main():
         # ax_error.cla()
         # Get control input
         # u = basic_input()
-        u, integral = pd_control(theta, thetadot, integral)
+        des_theta = np.radians(np.array([-30, 0, 0])) # TODO: hardcoded. should be given by velocity controller
+        u = pd_attitude_control(theta, thetadot, des_theta)
 
         # Compute angular velocity vector from angular velocities
         omega = thetadot2omega(thetadot, theta)
@@ -77,7 +81,6 @@ def main():
         x = x + dt * xdot
         print(x)
 
-        # visualize_quad(ax, x, hist_x, hist_y, hist_z)
         visualize_quad(ax, x, theta, hist_x, hist_y, hist_z)
 
         hist_x.append(x[0])
@@ -240,7 +243,7 @@ def calc_ang_acc(u, omega, I, L, b, k):
 
 def basic_input():
     """Return arbritrary input to test simulator"""
-    return np.power(np.array([950, 700, 850, 700]),2)
+    return np.power(np.array([950, 700, 700, 700]),2)
 
 def omega2thetadot(omega, theta):
     mult_matrix = np.array(
@@ -309,30 +312,23 @@ def get_rot_matrix(angles):
                         [-sthe,       cthe * sphi,                      cthe * cphi]])
     return rot_mat
 
-def pd_control(theta, thetadot, integral=None):
+def pd_attitude_control(theta, thetadot, des_theta):
+    """Attitude controller (PD)."""
+
     Kd = 4
     Kp = 3
-
-    # Initialize integral. Accumulate to get error in rpy angles
-    if integral is None:
-        print("Integral is NONE!")
-        integral = np.zeros((3,))
 
     # Compute total thrust
     tot_thrust = (m * g) // (k * np.cos(theta[1]) * np.cos(theta[0]))
 
     # Compute errors
-    e =  Kd * thetadot + Kp * integral
-    print("e_theta", e, integral[0])
+    # TODO: set thetadot to zero?
+    e =  Kd * thetadot + Kp * (theta - des_theta)
+    print("e_theta", e)
 
     # Compute control input
     u = error2u(e, theta, tot_thrust, m, g, k, b, L, I)
-    # print(np.degrees(theta))
-    print("u", u)
-    # Update state
-    integral += dt * thetadot
-
-    return u, integral
+    return u
 
 def error2u(error, theta, tot_thrust, m, g, k, b, L, I):
 

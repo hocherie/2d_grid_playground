@@ -9,8 +9,6 @@ import random
 def main():
     print("start!!")
 
-
-    
     # load map
     src_path_map = "data/two_obs.dat"
     map1 = Map(src_path_map)
