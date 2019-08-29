@@ -17,7 +17,10 @@ k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
-dt = 0.01
+dt = 0.005
+
+hist_theta = []
+hist_des_theta = []
 
 def main():
     print("start")
@@ -33,20 +36,28 @@ def main():
     integral = None
 
     # add noise to sensor?
-    deviation = 300;
-    thetadot = np.radians(2 * deviation * np.random.rand(3,) - deviation)
+    # deviation = 300;
+    # thetadot = np.radians(2 * deviation * np.random.rand(3,) - deviation)
+    thetadot = np.radians(np.array([10, 0 , 0]))
 
     fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    ax = fig.add_subplot(1,3,1, projection='3d')
+    # fig2 = plt.figure()
+    ax_th_error = fig.add_subplot(1, 3, 2)
+    ax_thr_error = fig.add_subplot(1,3,3)
 
     hist_x = []
     hist_y = []
     hist_z = []
+    hist_thetadot = []
+
+
     # Step through simulation
-    for t in range(100):
-        plt.cla()
+    for t in range(1000):
+        ax.cla()
+        # ax_error.cla()
         # Get control input
-        # u = calc_control()
+        # u = basic_input()
         u, integral = pd_control(theta, thetadot, integral)
 
         # Compute angular velocity vector from angular velocities
@@ -72,6 +83,11 @@ def main():
         hist_x.append(x[0])
         hist_y.append(x[1])
         hist_z.append(x[2])
+        hist_theta.append(np.degrees(theta[0]))
+        hist_thetadot.append(np.degrees(thetadot[0]))
+        hist_des_theta.append(0)
+
+        visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot)
 
 
 def visualize_quad(ax, x, theta, hist_x, hist_y, hist_z):
@@ -91,11 +107,22 @@ def visualize_quad(ax, x, theta, hist_x, hist_y, hist_z):
 
     # Plot history
     ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
+    # ax_th_error.
     ax.set_xlim(0,10)
     ax.set_ylim(0,10)
     ax.set_zlim(0, 20)
-    plt.pause(0.1)
+    plt.pause(0.0000001)
 
+
+def visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot):
+    # pass
+    # ax.plot([0,1], [1,10],'b')
+    
+    ax_th_error.plot(np.array(range(len(hist_theta)))*dt, hist_theta)
+    ax_thr_error.plot(np.array(range(len(hist_theta)))*dt, hist_thetadot)
+    
+    # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
+    plt.pause(0.00001)
 def compute_thrust(u,k):
     """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
 
@@ -173,7 +200,8 @@ def calc_acc(u, theta, xdot, m, g, k, kd):
     thrust = compute_thrust(u, k)
     T = np.dot(R, thrust)
     Fd = -kd * xdot
-    a = gravity + 1//m * (T + Fd)
+    a = gravity + 1//m * T + Fd
+    # a = gravity + (T+Fd)//m
     return a 
 
 def calc_ang_acc(u, omega, I, L, b, k):
@@ -210,8 +238,9 @@ def calc_ang_acc(u, omega, I, L, b, k):
 
     return omegaddot
 
-def calc_control():
-    return np.array([10, 10, 10, 10])*100000
+def basic_input():
+    """Return arbritrary input to test simulator"""
+    return np.power(np.array([950, 700, 850, 700]),2)
 
 def omega2thetadot(omega, theta):
     mult_matrix = np.array(
@@ -286,17 +315,20 @@ def pd_control(theta, thetadot, integral=None):
 
     # Initialize integral. Accumulate to get error in rpy angles
     if integral is None:
+        print("Integral is NONE!")
         integral = np.zeros((3,))
 
     # Compute total thrust
-    tot_thrust = (m * g) // (k * np.cos(theta[1] * np.cos(theta[0])))
+    tot_thrust = (m * g) // (k * np.cos(theta[1]) * np.cos(theta[0]))
 
     # Compute errors
-    e = Kd * thetadot + Kp * integral
+    e =  Kd * thetadot + Kp * integral
+    print("e_theta", e, integral[0])
 
     # Compute control input
     u = error2u(e, theta, tot_thrust, m, g, k, b, L, I)
-
+    # print(np.degrees(theta))
+    print("u", u)
     # Update state
     integral += dt * thetadot
 
