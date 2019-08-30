@@ -1,7 +1,8 @@
 import numpy as np
 import math 
 
-def pd_velocity_control(state, des_vel):
+
+def pd_velocity_control(state, des_vel, integral_v_err=None):
     """
     Assume desire zero angular velocity?
 
@@ -18,29 +19,43 @@ def pd_velocity_control(state, des_vel):
     uv : (3, ) np.ndarray
         roll, pitch, yaw 
     """
-    Pxd = -0.1
-    Pyd = 1
+    if integral_v_err is None:
+        integral_v_err = np.zeros((3,))
+    
+    Pxd = -0.15
+    Ixd = 0 #-0.005
+    Pyd = -0.15
+    Iyd = 0 #0.005
     Pzd = 1
     # TODO: change to return roll pitch yawrate thrust
 
     [xv, yv, zv] = state["xdot"]
     [xv_d, yv_d, zv_d] = des_vel
+    yaw = state["theta"][2]
 
     # Compute error
     v_err = state["xdot"] - des_vel
-    # v_err = -v_err #! 
-    pid_err_x = Pxd * v_err[0]
-    pid_err_y = Pyd * v_err[1]
+    # accumulate error integral
+    integral_v_err += v_err
+    
+    # Get PID Error
+    # TODO: vectorize
+    # TODO: test for with starting yaw angle, shouldn't it account current yaw for x,ysla
+    pid_err_x = Pxd * v_err[0] + Ixd * integral_v_err[0]
+    pid_err_y = Pyd * v_err[1] + Iyd * integral_v_err[1]
     pid_err_z = Pzd * v_err[2]
+    
 
-    des_pitch = pid_err_x 
-    des_roll = pid_err_y
-    # des_pitch = pid_err_x * math.sin(state["theta"][2]) - pid_err_y * math.cos(state["theta"][2])
-    # des_roll = pid_err_x * math.cos(state["theta"][2]) + pid_err_y * math.sin(state["theta"][2])
+    # TODO: implement for z vel
+    des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
+    des_roll = pid_err_x * np.sin(yaw) + pid_err_y * np.cos(yaw)
+
     # TODO: set yaw as constant
     des_yaw = state["theta"][2]
+    print("pid_error", pid_err_x, pid_err_y)
+    print("des pitch, roll", des_pitch, des_roll)
 
-    return np.array([des_roll, des_pitch, state["theta"][2]])
+    return np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
 def pd_attitude_control(state, des_theta,param_dict):

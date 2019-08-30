@@ -32,7 +32,7 @@ def visualize_quad(ax, state, hist_x, hist_y, hist_z):
     plt.pause(0.0000001)
 
 
-def visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt):
+def visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot):
     # pass
     # ax.plot([0,1], [1,10],'b')
 
@@ -43,6 +43,13 @@ def visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_thet
                      dt, np.array(hist_xdot)[:, 1], 'b')
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_xdot)[:, 2], 'r')
+    # Velocity Error
+    ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_xdot)[:, 0], 'k--')
+    ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_xdot)[:, 1], 'b--')
+    ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_des_xdot)[:, 2], 'r--')
     ax_th_error.legend(["x", "y", "z"])
 
     # Angle Error
