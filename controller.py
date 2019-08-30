@@ -1,6 +1,48 @@
 import numpy as np
+import math 
 
-# def pd_velocity_control():
+def pd_velocity_control(state, des_vel):
+    """
+    Assume desire zero angular velocity?
+
+    Parameter
+    ---------
+    state : dict 
+        contains current x, xdot, theta, thetadot
+        
+    des_vel : (3, ) np.ndarray
+        desired linear velocity
+
+    Returns
+    -------
+    uv : (3, ) np.ndarray
+        roll, pitch, yaw 
+    """
+    Pxd = -1
+    Pyd = 1
+    Pzd = 1
+    # TODO: change to return roll pitch yawrate thrust
+
+    [xv, yv, zv] = state["xdot"]
+    [xv_d, yv_d, zv_d] = des_vel
+
+    # Compute error
+    v_err = state["xdot"] - des_vel
+    # v_err = -v_err #! 
+    pid_err_x = Pxd * v_err[0]
+    pid_err_y = Pyd * v_err[1]
+    pid_err_z = Pzd * v_err[2]
+
+    des_pitch = pid_err_x 
+    des_roll = pid_err_y
+    # des_pitch = pid_err_x * math.sin(state["theta"][2]) - pid_err_y * math.cos(state["theta"][2])
+    # des_roll = pid_err_x * math.cos(state["theta"][2]) + pid_err_y * math.sin(state["theta"][2])
+    # TODO: set yaw as constant
+    des_yaw = state["theta"][2]
+
+    return np.array([des_roll, des_pitch, state["theta"][2]])
+
+
 def pd_attitude_control(state, des_theta,param_dict):
     """Attitude controller (PD). Uses current theta and theta dot.
     
@@ -19,8 +61,8 @@ def pd_attitude_control(state, des_theta,param_dict):
     
     """
 
-    Kd = 4
-    Kp = 7
+    Kd = 10
+    Kp = 30
 
     # TODO: make into class, have param_dict as class member
     g = param_dict["g"]
