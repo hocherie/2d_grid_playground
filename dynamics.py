@@ -8,6 +8,8 @@ import numpy as np
 import numpy.matlib
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
+from visualize_dynamics import *
+from sim_utils import *
 
 # Physical constants
 g = 9.81
@@ -22,138 +24,81 @@ dt = 0.02
 hist_theta = []
 hist_des_theta = []
 hist_thetadot = []
+hist_x = []
+hist_y = []
+hist_z = []
+
+def init_state():
+    state = {"x": np.array([5, 0, 10]) , 
+                "xdot": np.zeros(3,),
+                # "theta": np.zeros(3,),
+                # "thetadot": np.zeros(3,),
+                "theta": np.radians(np.array([10, -7, 5])),  # ! hardcoded
+                "thetadot": np.radians(np.array([10, 0, 0]))  # ! hardcoded
+                }
+    return state
+
 
 def main():
     print("start")
 
-
-
-
-    # Initialize
-    x = np.array([5,0,10])
-    xdot = np.zeros_like(x)
-    theta = np.zeros_like(x)
-    thetadot = np.zeros_like(x)
-    integral = None
-
-    # add noise to sensor?
-    deviation = 300;
-    # thetadot = np.radians(2 * deviation * np.random.rand(3,) - deviation)
-    thetadot = np.radians(np.array([10, 0 , 0]))
+    state = init_state()
 
     # Initialize visualization
     fig = plt.figure()
     ax = fig.add_subplot(1,3,1, projection='3d')
     ax_th_error = fig.add_subplot(1, 3, 2)
     ax_thr_error = fig.add_subplot(1,3,3)
-    # th_err_ani = animation.FuncAnimation(fig, visualize_quad, )
 
-    hist_x = []
-    hist_y = []
-    hist_z = []
-
-    
+    # ! hardcoded. should be given by velocity controller
+    des_theta_deg = np.array([0, 0, 0])
+    des_theta = np.radians(des_theta_deg)
 
 
     # Step through simulation
     for t in range(1000):
         ax.cla()
-        # ax_error.cla()
-        # Get control input
-        # u = basic_input()
-        des_theta_deg = np.array([-30, 10, 20])
-        # TODO: hardcoded. should be given by velocity controller
-        des_theta = np.radians(des_theta_deg)
-        u = pd_attitude_control(theta, thetadot, des_theta)
 
+        u = pd_attitude_control(state, des_theta) # get control
+        step_dynamics(state, u) # Step dynamcis and update state dict
+        update_history(state, des_theta_deg) # update history for plotting
+
+        # Visualize quadrotor and angle error
+        visualize_quad(ax, state, hist_x, hist_y, hist_z)
+        visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot, dt)
+def update_history(state, des_theta_deg_i):
+    x = state["x"]
+    hist_x.append(x[0])
+    hist_y.append(x[1])
+    hist_z.append(x[2])
+    hist_theta.append(np.degrees(state["theta"]))
+    hist_thetadot.append(np.degrees(state["thetadot"]))
+    hist_des_theta.append(des_theta_deg_i)
+
+def step_dynamics(state, u):
+    """Step dynamics given current state and input. Update state dict."""
         # Compute angular velocity vector from angular velocities
-        omega = thetadot2omega(thetadot, theta)
+    omega = thetadot2omega(state["thetadot"], state["theta"])
+
+    # Compute linear and angular accelerations given input and state
+    # TODO: combine state
+    a = calc_acc(u, state["theta"], state["xdot"], m, g, k, kd)
+    omegadot = calc_ang_acc(u, omega, I, L, b, k)
+
+    # Compute next state
+    omega = omega + dt * omegadot
+    thetadot = omega2thetadot(omega, state["theta"])
+    theta = state["theta"] + dt * state["thetadot"]
+    xdot = state["xdot"] + dt * a
+    x = state["x"] + dt * xdot
+
+    # Update state dictionary
+    state["x"] = x
+    state["xdot"] = xdot
+    state["theta"] = theta
+    state["thetadot"] = thetadot
 
 
-        # Compute angular and linear accelerations given input and state
-        # TODO: combine state
-        a = calc_acc(u, theta, xdot, m, g, k, kd)
-        omegadot = calc_ang_acc(u, omega, I, L, b, k)
-
-        # Compute velocity and state
-        omega = omega + dt * omegadot
-        thetadot = omega2thetadot(omega, theta)
-        theta = theta + dt * thetadot
-        xdot = xdot + dt * a
-        x = x + dt * xdot
-        print(x)
-
-        visualize_quad(ax, x, theta, hist_x, hist_y, hist_z)
-
-        hist_x.append(x[0])
-        hist_y.append(x[1])
-        hist_z.append(x[2])
-        hist_theta.append(np.degrees(theta))
-        hist_thetadot.append(np.degrees(thetadot))
-        hist_des_theta.append(des_theta_deg)
-
-        visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot)
-
-
-def visualize_quad(ax, x, theta, hist_x, hist_y, hist_z):
-    """Plot quadrotor 3D position and history"""
-    R = get_rot_matrix(theta)
-    plot_L = 1
-    quad_ends_body = np.array(
-        [[-plot_L, 0, 0], [plot_L, 0, 0], [0, -plot_L, 0], [0, plot_L, 0], [0, 0, 0], [0, 0, 0]]).T
-    quad_ends_world = np.dot(R, quad_ends_body) + np.matlib.repmat(x, 6, 1).T
-    # Plot Rods
-    ax.plot3D(quad_ends_world[0, 0:2],
-            quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'b')
-    ax.plot3D(quad_ends_world[0, 2:4],
-              quad_ends_world[1, 2:4], quad_ends_world[2, 2:4], 'b')
-    # Plot drone center
-    ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
-
-    # Plot history
-    ax.scatter3D(hist_x, hist_y, hist_z, edgecolor="b", facecolor="b", alpha=0.1)
-    # ax_th_error.
-    ax.set_xlim(0,10)
-    ax.set_ylim(0,10)
-    ax.set_zlim(0, 10)
-    plt.pause(0.0000001)
-
-
-def visualize_error(ax_th_error, ax_thr_error, hist_theta, hist_des_theta, hist_thetadot):
-    # pass
-    # ax.plot([0,1], [1,10],'b')
-    
-    # Angle Error
-    ax_th_error.plot(np.array(range(len(hist_theta)))*dt, np.array(hist_theta)[:,0], 'k')
-    ax_th_error.plot(np.array(range(len(hist_theta))) *
-                     dt, np.array(hist_theta)[:, 1], 'b')
-    ax_th_error.plot(np.array(range(len(hist_theta))) *
-                     dt, np.array(hist_theta)[:, 2], 'r')
-    # Desired angle
-    ax_th_error.plot(np.array(range(len(hist_theta))) *
-                     dt, np.array(hist_des_theta)[:, 0], 'k--')
-    ax_th_error.plot(np.array(range(len(hist_theta))) *
-                     dt, np.array(hist_des_theta)[:, 1], 'b--')
-    ax_th_error.plot(np.array(range(len(hist_theta))) *
-                     dt, np.array(hist_des_theta)[:, 2], 'r--')
-    # ax_th_error.plot(np.array(range(len(hist_theta))) *
-                    #  dt, np.array(hist_theta)[:, 2], 'r')
-
-
-    ax_th_error.legend(["Roll", "Pitch", "Yaw"])
-    ax_th_error.set_ylim(-40, 40)
-
-    # Angle Rate
-    ax_thr_error.plot(np.array(range(len(hist_theta))) *
-                      dt, np.array(hist_thetadot)[:, 0], 'k')
-    ax_thr_error.plot(np.array(range(len(hist_theta))) *
-                      dt, np.array(hist_thetadot)[:, 1], 'b')
-    ax_thr_error.plot(np.array(range(len(hist_theta))) *
-                      dt, np.array(hist_thetadot)[:, 2], 'r')
-    # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
-    ax_thr_error.legend(["Roll Rate", "Pitch Rate", "Yaw Rate"])
-    ax_thr_error.set_ylim(-40, 40)
-    plt.pause(0.00001)
 def compute_thrust(u,k):
     """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
 
@@ -325,32 +270,19 @@ def thetadot2omega(thetadot, theta):
 
     return w
 
-def get_rot_matrix(angles):
-    [phi, theta, psi] = angles
-    cphi = np.cos(phi)
-    sphi = np.sin(phi)
-    cthe = np.cos(theta)
-    sthe = np.sin(theta)
-    cpsi = np.cos(psi)
-    spsi = np.sin(psi)
 
-    rot_mat = np.array([[cthe * cpsi, sphi * sthe * cpsi - cphi * spsi, cphi * sthe * cpsi + sphi * spsi],
-                        [cthe * spsi, sphi * sthe * spsi + cphi *
-                            cpsi, cphi * sthe * spsi - sphi * cpsi],
-                        [-sthe,       cthe * sphi,                      cthe * cphi]])
-    return rot_mat
-
-# def pd_velocity_control():
-def pd_attitude_control(theta, thetadot, des_theta):
+def pd_attitude_control(state, des_theta):
     """Attitude controller (PD).
     
-    Parameter
-    ---------
+    Returns: u, motor speed
     
     """
 
     Kd = 4
-    Kp = 3
+    Kp = 7
+
+    theta = state["theta"]
+    thetadot = state["thetadot"]
 
     # Compute total thrust
     tot_thrust = (m * g) // (k * np.cos(theta[1]) * np.cos(theta[0]))
@@ -360,7 +292,7 @@ def pd_attitude_control(theta, thetadot, des_theta):
     e =  Kd * thetadot + Kp * (theta - des_theta)
     print("e_theta", e)
 
-    # Compute control input
+    # Compute control input (dynamic inversion)
     u = error2u(e, theta, tot_thrust, m, g, k, b, L, I)
     return u
 
