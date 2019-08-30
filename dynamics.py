@@ -20,7 +20,7 @@ k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
-dt = 0.02
+dt = 0.2
 param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt}
 
 hist_theta = []
@@ -312,17 +312,17 @@ def main():
     ax_thr_error = fig.add_subplot(2, 2, 4)
 
     # # ! hardcoded. should be given by velocity controller
-    des_theta_deg = np.array([-10, 15, 0])
-    des_theta = np.radians(des_theta_deg)
-    # des_vel = np.array([0.2, 0, 0])
+    # des_theta_deg = np.array([-10, 15, 0])
+    # des_theta = np.radians(des_theta_deg)
+    des_vel = np.array([0.2, 0, 0])
 
     # Step through simulation
     for t in range(1000):
         ax.cla()
 
-        # des_theta = pd_velocity_control(state, des_vel) # attitude control
-        # print(des_theta)
-        # des_theta_deg = np.degrees(des_theta) # for logging
+        des_theta = pd_velocity_control(state, des_vel) # attitude control
+        print(des_theta)
+        des_theta_deg = np.degrees(des_theta) # for logging
         u = pd_attitude_control(state, des_theta, param_dict)  # attitude control
         step_dynamics(state, u, force_theta=None)  # Step dynamcis and update state dict
         update_history(state, des_theta_deg)  # update history for plotting

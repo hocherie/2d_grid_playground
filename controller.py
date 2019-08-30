@@ -18,7 +18,7 @@ def pd_velocity_control(state, des_vel):
     uv : (3, ) np.ndarray
         roll, pitch, yaw 
     """
-    Pxd = -1
+    Pxd = -0.1
     Pyd = 1
     Pzd = 1
     # TODO: change to return roll pitch yawrate thrust
