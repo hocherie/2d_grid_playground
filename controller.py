@@ -40,7 +40,7 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
     
     # Get PID Error
     # TODO: vectorize
-    # TODO: test for with starting yaw angle, shouldn't it account current yaw for x,ysla
+    
     pid_err_x = Pxd * v_err[0] + Ixd * integral_v_err[0]
     pid_err_y = Pyd * v_err[1] + Iyd * integral_v_err[1]
     pid_err_z = Pzd * v_err[2]
@@ -48,9 +48,9 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
 
     # TODO: implement for z vel
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
-    des_roll = pid_err_x * np.sin(yaw) + pid_err_y * np.cos(yaw)
+    des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
 
-    # TODO: set yaw as constant
+    # TODO: currently, set yaw as constant
     des_yaw = state["theta"][2]
     print("pid_error", pid_err_x, pid_err_y)
     print("des pitch, roll", des_pitch, des_roll)

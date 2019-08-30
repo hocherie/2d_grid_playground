@@ -315,10 +315,8 @@ def main():
     ax_th_error = fig.add_subplot(2, 2, 3)
     ax_thr_error = fig.add_subplot(2, 2, 4)
 
-    # # ! hardcoded. should be given by velocity controller
-    # des_theta_deg = np.array([-10, 15, 0])
-    # des_theta = np.radians(des_theta_deg)
-    des_vel = np.array([-0.3, 0, 0])
+    
+    des_vel = np.array([0.3, -0.1, 0])
 
     # Initialize controller errors
     integral_v_err = None
