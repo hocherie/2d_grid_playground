@@ -1,8 +1,21 @@
 import numpy as np
+
+# def pd_velocity_control():
 def pd_attitude_control(state, des_theta,param_dict):
-    """Attitude controller (PD).
+    """Attitude controller (PD). Uses current theta and theta dot.
     
-    Returns: u, motor speed
+    Parameter
+    ---------
+    state : dict 
+        contains current x, xdot, theta, thetadot
+
+    k : float
+        thrust coefficient
+
+    Returns
+    -------
+    u : (4, ) np.ndarray
+        control input - (angular velocity)^squared of motors (rad^2/s^2)
     
     """
 
