@@ -43,13 +43,29 @@ def pd_attitude_control(state, des_theta,param_dict):
     e = Kd * thetadot + Kp * (theta - des_theta)
     # print("e_theta", e)
 
-    # Compute control input (dynamic inversion)
-    u = error2u(e, theta, tot_thrust, m, g, k, b, L, I)
+    # Compute control input given angular error (dynamic inversion)
+    u = angerr2u(e, theta, tot_thrust, param_dict)
     return u
 
 
-def error2u(error, theta, tot_thrust, m, g, k, b, L, I):
+def angerr2u(error, theta, tot_thrust, param_dict):
+    """Compute control input given angular error. Closed form specification
+    with dynamics inversion.
 
+    Parameters
+    ----------
+    error
+    """
+    # TODO: make into class, have param_dict as class member
+    g = param_dict["g"]
+    m = param_dict["m"]
+    L = param_dict["L"]
+    k = param_dict["k"]
+    b = param_dict["b"]
+    I = param_dict["I"]
+    kd = param_dict["kd"]
+    dt = param_dict["dt"]
+    
     e0 = error[0]
     e1 = error[1]
     e2 = error[2]
@@ -57,7 +73,6 @@ def error2u(error, theta, tot_thrust, m, g, k, b, L, I):
     Iyy = I[1, 1]
     Izz = I[2, 2]
 
-    # rbase = (m*g) // (4*k*np.cos(theta[1])*np.cos(theta[0]))
     r0 = tot_thrust//4 - (2*b*e0*Ixx + e2*Izz*k*L)//(4*b*k*L)
 
     r1 = tot_thrust//4 + (e2*Izz)//(4*b) - (e1*Iyy)//(2*k*L)
