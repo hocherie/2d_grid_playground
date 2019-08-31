@@ -6,6 +6,8 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
     """
     Assume desire zero angular velocity?
 
+    #TODO: only for x,y velocity
+
     Parameter
     ---------
     state : dict 
@@ -22,10 +24,10 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
     if integral_v_err is None:
         integral_v_err = np.zeros((3,))
     
-    Pxd = -0.15
-    Ixd = 0 #-0.005
-    Pyd = -0.15
-    Iyd = 0 #0.005
+    Pxd = -0.12
+    Ixd = -0.005 #-0.005
+    Pyd = -0.12
+    Iyd = -0.005 #0.005
     Pzd = 1
     # TODO: change to return roll pitch yawrate thrust
 
@@ -43,7 +45,7 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
     
     pid_err_x = Pxd * v_err[0] + Ixd * integral_v_err[0]
     pid_err_y = Pyd * v_err[1] + Iyd * integral_v_err[1]
-    pid_err_z = Pzd * v_err[2]
+    pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
     
 
     # TODO: implement for z vel
