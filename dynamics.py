@@ -315,7 +315,7 @@ def main():
     ax_th_error = fig.add_subplot(2, 2, 3)
     ax_thr_error = fig.add_subplot(2, 2, 4)
 
-    
+
     des_vel = np.array([0.3, -0.1, 0])
 
     # Initialize controller errors
@@ -325,9 +325,10 @@ def main():
     for t in range(1000):
         ax.cla()
 
-        des_theta, integral_v_err = pd_velocity_control(state, des_vel, integral_v_err) # attitude control
+        des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
         des_theta_deg = np.degrees(des_theta) # for logging
-        u = pd_attitude_control(state, des_theta, param_dict)  # attitude control
+        u = pi_attitude_control(
+            state, des_theta, param_dict)  # attitude control
         step_dynamics(state, u, force_theta=None)  # Step dynamcis and update state dict
         update_history(state, des_theta_deg, des_vel)  # update history for plotting
 

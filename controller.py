@@ -2,7 +2,7 @@ import numpy as np
 import math 
 
 
-def pd_velocity_control(state, des_vel, integral_v_err=None):
+def pi_velocity_control(state, des_vel, integral_v_err=None):
     """
     Assume desire zero angular velocity?
 
@@ -15,6 +15,9 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
         
     des_vel : (3, ) np.ndarray
         desired linear velocity
+
+    integral_v_err : (3, ) np.ndarray
+        keeps track of integral error
 
     Returns
     -------
@@ -60,7 +63,7 @@ def pd_velocity_control(state, des_vel, integral_v_err=None):
     return np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
-def pd_attitude_control(state, des_theta,param_dict):
+def pi_attitude_control(state, des_theta,param_dict):
     """Attitude controller (PD). Uses current theta and theta dot.
     
     Parameter
