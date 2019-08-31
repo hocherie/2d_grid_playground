@@ -50,6 +50,8 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
                     dt, np.array(hist_des_x)[:, 1], 'b--')
     ax_x_error.plot(np.array(range(len(hist_theta))) *
                     dt, np.array(hist_des_x)[:, 2], 'r--')
+    ax_x_error.set_title("Position (world)")
+    ax_x_error.legend(["x", "y", "z"])
 
     # TODO: make into funciton for each plot
     # Velocity Error
@@ -67,7 +69,7 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_des_xdot)[:, 2], 'r--')
     ax_xd_error.legend(["x", "y", "z"])
-    ax_xd_error.set_title("Velocity (w)")
+    ax_xd_error.set_title("Velocity (world)")
 
     # Angle Error
     ax_th_error.plot(np.array(range(len(hist_theta))) *
@@ -86,6 +88,7 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
 
     ax_th_error.legend(["Roll", "Pitch", "Yaw"])
     ax_th_error.set_ylim(-40, 40)
+    ax_th_error.set_title("Angle")
 
     # Angle Rate
     ax_thr_error.plot(np.array(range(len(hist_theta))) *
@@ -96,5 +99,6 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
                       dt, np.array(hist_thetadot)[:, 2], 'r')
     # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
     ax_thr_error.legend(["Roll Rate", "Pitch Rate", "Yaw Rate"])
-    ax_thr_error.set_ylim(-40, 40)
+    ax_thr_error.set_ylim(-100, 100)
     plt.pause(0.00001)
+    ax_thr_error.set_title("Angular Rate")

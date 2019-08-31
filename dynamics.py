@@ -331,6 +331,9 @@ def main():
 
     # Step through simulation
     for t in range(1000):
+
+        if t * dt > 20:
+            des_pos = np.array([0,0,10])
         ax.cla()
         des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
         des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
