@@ -1,6 +1,40 @@
 import numpy as np
 import math 
 
+def pi_position_control(state, des_pos, integral_p_err=None):
+    if integral_p_err is None:
+        integral_p_err = np.zeros((3,))
+
+    Px = -0.7
+    Ix = 0  # -0.005
+    Py = -0.7
+    Iy = 0  # 0.005
+    Pz = 1
+
+    [x, y, z] = state["x"]
+    [x_d, y_d, z_d] = des_pos
+    yaw = state["theta"][2]
+
+    # Compute error
+    p_err = state["x"] - des_pos
+    # accumulate error integral
+    integral_p_err += p_err
+
+    # Get PID Error
+    # TODO: vectorize
+
+    pid_err_x = Px * p_err[0] + Ix * integral_p_err[0]
+    pid_err_y = Py * p_err[1] + Iy * integral_p_err[1]
+    pid_err_z = Pz * p_err[2]  # TODO: project onto attitude angle?
+
+    # TODO: implement for z vel
+    des_xv = pid_err_x # * np.cos(yaw) + pid_err_y * np.sin(yaw)
+    des_yv = pid_err_y #* np.sin(yaw) - pid_err_y * np.cos(yaw)
+
+    # TODO: currently, set z as constant
+    des_zv = 0
+
+    return np.array([des_xv, des_yv, des_zv]), integral_p_err
 
 def pi_velocity_control(state, des_vel, integral_v_err=None):
     """

@@ -30,7 +30,9 @@ hist_xdot = []
 hist_x = []
 hist_y = []
 hist_z = []
+hist_pos = []
 hist_des_xdot = []
+hist_des_x = []
 
 def init_state():
     """Initialize state dictionary. """
@@ -288,7 +290,7 @@ def thetadot2omega(thetadot, theta):
     return w
 
 
-def update_history(state, des_theta_deg_i, des_xdot_i):
+def update_history(state, des_theta_deg_i, des_xdot_i, des_x_i):
     """Appends current state and desired theta for plotting."""
     x = state["x"]
     print("state", x)
@@ -301,6 +303,8 @@ def update_history(state, des_theta_deg_i, des_xdot_i):
     hist_des_theta.append(des_theta_deg_i)
     hist_xdot.append(state["xdot"])
     hist_des_xdot.append(des_xdot_i)
+    hist_des_x.append(des_x_i)
+    hist_pos.append(x)
 
 
 def main():
@@ -310,31 +314,34 @@ def main():
 
     # Initialize visualization
     fig = plt.figure()
-    ax = fig.add_subplot(2, 2, 1, projection='3d')
-    ax_xd_error = fig.add_subplot(2,2,2)
-    ax_th_error = fig.add_subplot(2, 2, 3)
-    ax_thr_error = fig.add_subplot(2, 2, 4)
+    ax = fig.add_subplot(2, 3, 1, projection='3d')
+    ax_x_error = fig.add_subplot(2, 3, 2)
+    ax_xd_error = fig.add_subplot(2,3,3)
+    ax_th_error = fig.add_subplot(2, 3, 4)
+    ax_thr_error = fig.add_subplot(2, 3, 5)
+    
 
 
-    des_vel = np.array([0.3, -0.1, 0])
+    # des_vel = np.array([0.3, -0.1, 0])
+    des_pos = np.array([-3, 7, 10])
 
     # Initialize controller errors
+    integral_p_err = None
     integral_v_err = None
 
     # Step through simulation
     for t in range(1000):
         ax.cla()
-
+        des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
         des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
         des_theta_deg = np.degrees(des_theta) # for logging
         u = pi_attitude_control(
             state, des_theta, param_dict)  # attitude control
         step_dynamics(state, u, force_theta=None)  # Step dynamcis and update state dict
-        update_history(state, des_theta_deg, des_vel)  # update history for plotting
+        update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
 
         # Visualize quadrotor and angle error
         visualize_quad(ax, state, hist_x, hist_y, hist_z)
-        visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_theta,
-                        hist_des_theta, hist_thetadot, dt, hist_des_xdot)
+        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos, hist_xdot, hist_theta,hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x)
 if __name__ == '__main__':
     main()

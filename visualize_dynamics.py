@@ -32,10 +32,26 @@ def visualize_quad(ax, state, hist_x, hist_y, hist_z):
     plt.pause(0.0000001)
 
 
-def visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot):
+def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x):
     # pass
     # ax.plot([0,1], [1,10],'b')
 
+    # Position Error
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_pos)[:, 0], 'k')
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_pos)[:, 1], 'b')
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_pos)[:, 2], 'r')
+    # Desired Pos
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_des_x)[:, 0], 'k--')
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_des_x)[:, 1], 'b--')
+    ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(hist_des_x)[:, 2], 'r--')
+
+    # TODO: make into funciton for each plot
     # Velocity Error
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_xdot)[:, 0], 'k')
@@ -43,14 +59,15 @@ def visualize_error(ax_xd_error, ax_th_error, ax_thr_error, hist_xdot, hist_thet
                      dt, np.array(hist_xdot)[:, 1], 'b')
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_xdot)[:, 2], 'r')
-    # Velocity Error
+    # Desired Velocity
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_des_xdot)[:, 0], 'k--')
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_des_xdot)[:, 1], 'b--')
     ax_xd_error.plot(np.array(range(len(hist_theta))) *
                      dt, np.array(hist_des_xdot)[:, 2], 'r--')
-    ax_th_error.legend(["x", "y", "z"])
+    ax_xd_error.legend(["x", "y", "z"])
+    ax_xd_error.set_title("Velocity (w)")
 
     # Angle Error
     ax_th_error.plot(np.array(range(len(hist_theta))) *
