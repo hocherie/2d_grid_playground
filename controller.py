@@ -136,14 +136,23 @@ def pi_attitude_control(state, des_theta,param_dict):
 
     # Compute errors
     # TODO: set thetadot to zero?
-    e = Kd * thetadot + Kp * (theta - des_theta)
+    e = Kd * thetadot + Kp * np.array(map(wrap2pi, theta - des_theta))
     # print("e_theta", e)
 
     # Compute control input given angular error (dynamic inversion)
     u = angerr2u(e, theta, tot_thrust, param_dict)
     return u
 
-
+def wrap2pi(ang_diff):
+    """For angle difference."""
+    while ang_diff > np.pi//2 or ang_diff < -np.pi//2:
+        print(ang_diff)
+        if ang_diff > np.pi//2:
+            ang_diff -= np.pi
+        else: # < -np.pi//2
+            ang_diff += np.pi
+    
+    return ang_diff
 def angerr2u(error, theta, tot_thrust, param_dict):
     """Compute control input given angular error. Closed form specification
     with dynamics inversion.

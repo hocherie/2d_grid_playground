@@ -323,7 +323,7 @@ def main():
 
 
     # des_vel = np.array([0.3, -0.1, 0])
-    des_pos = np.array([-3, 7, 10])
+    des_pos = np.array([-3, 5, 10])
 
     # Initialize controller errors
     integral_p_err = None
