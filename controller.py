@@ -38,7 +38,7 @@ def pi_position_control(state, des_pos, integral_p_err=None):
 
 def pi_velocity_control(state, des_vel, integral_v_err=None):
     """
-    Assume desire zero angular velocity?
+    Assume desire zero angular velocity? Also clips min and max roll, pitch.
 
     #TODO: only for x,y velocity
 
