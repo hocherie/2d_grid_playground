@@ -58,15 +58,15 @@ class Robot():
     def move(self):
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
-        # u = basic_input() #! TODO
 
-        integral_p_err=None,
-        integral_v_err=None
-        des_pos = np.array([50, 30, 10])
+        des_pos = np.array(
+            [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
         u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
         self.state = self.dynamics.step_dynamics(self.state, u)
         self.x = self.state["x"][0]
         self.y = self.state["x"][1]
+        # self.x += self.pos_cont.u_x
+        # self.y += self.pos_cont.u_y
         # print(self.x, self.y)
         
 
@@ -114,7 +114,7 @@ class PositionController():
         og_ux = 0
         og_uy = 1
         self.og_control = (og_ux, og_uy)
-        # return (og_ux, og_uy)
+        return (og_ux, og_uy)
 
     def calc_safe_control(self):
         # Naive: choose minimum distance and push away. should have equilibrium point when at stopping limit
