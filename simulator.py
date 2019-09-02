@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import math
 import random
 from bresenham import bresenham
+from dynamics import QuadDynamics
+from dynamics import basic_input
+from controller import *
 
 MAX_RANGE = 1000
 DISPSCALE = 5
@@ -17,8 +20,15 @@ SAFE_RANGE = 30
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None):
-        self.x = 50
-        self.y = 10
+        self.state = {"x": np.array([50, 10, 10]),
+                      "xdot": np.zeros(3,),
+                      "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
+                      # ! hardcoded
+                      "thetadot": np.radians(np.array([0, 0, 0]))
+                      }
+        self.x = self.state["x"][0]
+        self.y = self.state["x"][1]
+        self.dynamics = QuadDynamics()
         self.hist_x = []
         self.hist_y = [] 
         self.map = map1
@@ -48,8 +58,15 @@ class Robot():
     def move(self):
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
-        self.x += self.pos_cont.u_x
-        self.y += self.pos_cont.u_y
+        # u = basic_input() #! TODO
+
+        integral_p_err=None,
+        integral_v_err=None
+        des_pos = np.array([50, 30, 10])
+        u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
+        self.state = self.dynamics.step_dynamics(self.state, u)
+        self.x = self.state["x"][0]
+        self.y = self.state["x"][1]
         # print(self.x, self.y)
         
 
@@ -162,9 +179,10 @@ class LidarSimulator():
 
     def get_bresenham_points(self, p1, p2):
         """Get list of coordinates of line (in tuples) from p1 and p2. 
+        #! uses integer position?
         Input: points (tuple) ex. (x,y)"""
 
-        return list(bresenham(p1[0], p1[1], p2[0], p2[1]))
+        return list(bresenham(int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1])))
 
     def update_reading(self, pos):
         """Update sensed obstacle locations and ranges."""
