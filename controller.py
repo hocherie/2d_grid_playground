@@ -5,9 +5,9 @@ def pi_position_control(state, des_pos, integral_p_err=None):
     if integral_p_err is None:
         integral_p_err = np.zeros((3,))
 
-    Px = -0.7
+    Px = -0.5
     Ix = 0  # -0.005
-    Py = -0.7
+    Py = -0.5
     Iy = 0  # 0.005
     Pz = 1
 
@@ -88,6 +88,10 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     # TODO: implement for z vel
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
+
+    # TODO: move to attitude controller?
+    des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
+    des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
 
     # TODO: currently, set yaw as constant
     des_yaw = state["theta"][2]

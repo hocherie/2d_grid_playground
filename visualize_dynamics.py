@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     """Plot quadrotor 3D position and history"""
     x = cur_state
-    theta = cur_theta
+    theta = np.radians(cur_theta) 
     R = get_rot_matrix(theta)
     plot_L = 1
     quad_ends_body = np.array(
@@ -14,7 +14,7 @@ def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     quad_ends_world = np.dot(R, quad_ends_body) + np.matlib.repmat(x, 6, 1).T
     # Plot Rods
     ax.plot3D(quad_ends_world[0, 0:2],
-              quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'b')
+              quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'r')
     ax.plot3D(quad_ends_world[0, 2:4],
               quad_ends_world[1, 2:4], quad_ends_world[2, 2:4], 'b')
     # Plot drone center

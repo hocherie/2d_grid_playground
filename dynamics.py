@@ -21,7 +21,7 @@ k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
-dt = 0.05
+dt = 0.1
 param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt}
 
 hist_theta = []
