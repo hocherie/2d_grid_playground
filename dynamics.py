@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from visualize_dynamics import *
 from sim_utils import *
 from controller import *
+import time
 
 # Physical constants
 g = 9.81
@@ -20,7 +21,7 @@ k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
-dt = 0.2
+dt = 0.05
 param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt}
 
 hist_theta = []
@@ -293,8 +294,6 @@ def thetadot2omega(thetadot, theta):
 def update_history(state, des_theta_deg_i, des_xdot_i, des_x_i):
     """Appends current state and desired theta for plotting."""
     x = state["x"]
-    print("state", x)
-    print("state xdot", state["xdot"])
     hist_x.append(x[0])
     hist_y.append(x[1])
     hist_z.append(x[2])
@@ -309,6 +308,7 @@ def update_history(state, des_theta_deg_i, des_xdot_i, des_x_i):
 
 def main():
     print("start")
+    t_start = time.time()
 
     state = init_state()
 
@@ -330,7 +330,7 @@ def main():
     integral_v_err = None
 
     # Step through simulation
-    for t in range(1000):
+    for t in range(100):
 
         if t * dt > 20:
             des_pos = np.array([0,0,10])
@@ -343,8 +343,13 @@ def main():
         step_dynamics(state, u, force_theta=None)  # Step dynamcis and update state dict
         update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
 
-        # Visualize quadrotor and angle error
-        visualize_quad(ax, state, hist_x, hist_y, hist_z)
-        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos, hist_xdot, hist_theta,hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x)
+    for t in range(100):
+        # # Visualize quadrotor and angle error
+        ax.cla()
+        visualize_quad(ax, hist_x[:t], hist_y[:t], hist_z[:t], hist_pos[t], hist_theta[t])
+        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
+                        hist_pos[:t+1], hist_xdot[:t+1], hist_theta[:t+1], hist_des_theta[:t+1], hist_thetadot[:t+1], dt, hist_des_xdot[:t+1], hist_des_x[:t+1])
+
+    print("Time Elapsed:", time.time() - t_start)
 if __name__ == '__main__':
     main()

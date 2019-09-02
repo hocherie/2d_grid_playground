@@ -2,10 +2,11 @@ from sim_utils import *
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
-def visualize_quad(ax, state, hist_x, hist_y, hist_z):
+
+def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     """Plot quadrotor 3D position and history"""
-    x = state["x"]
-    theta = state["theta"]
+    x = cur_state
+    theta = cur_theta
     R = get_rot_matrix(theta)
     plot_L = 1
     quad_ends_body = np.array(
@@ -29,7 +30,7 @@ def visualize_quad(ax, state, hist_x, hist_y, hist_z):
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    plt.pause(0.0000001)
+    plt.pause(0.1)
 
 
 def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x):
@@ -100,5 +101,5 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
     # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
     ax_thr_error.legend(["Roll Rate", "Pitch Rate", "Yaw Rate"])
     ax_thr_error.set_ylim(-100, 100)
-    plt.pause(0.00001)
+    plt.pause(0.1)
     ax_thr_error.set_title("Angular Rate")

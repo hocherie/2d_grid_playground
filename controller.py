@@ -91,8 +91,8 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
 
     # TODO: currently, set yaw as constant
     des_yaw = state["theta"][2]
-    print("pid_error", pid_err_x, pid_err_y)
-    print("des pitch, roll", des_pitch, des_roll)
+    # print("pid_error", pid_err_x, pid_err_y)
+    # print("des pitch, roll", des_pitch, des_roll)
 
     return np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
@@ -136,7 +136,7 @@ def pi_attitude_control(state, des_theta,param_dict):
 
     # Compute errors
     # TODO: set thetadot to zero?
-    e = Kd * thetadot + Kp * np.array(map(wrap2pi, theta - des_theta))
+    e = Kd * thetadot + Kp * (theta - des_theta)
     # print("e_theta", e)
 
     # Compute control input given angular error (dynamic inversion)
@@ -146,7 +146,7 @@ def pi_attitude_control(state, des_theta,param_dict):
 def wrap2pi(ang_diff):
     """For angle difference."""
     while ang_diff > np.pi//2 or ang_diff < -np.pi//2:
-        print(ang_diff)
+        # print(ang_diff)
         if ang_diff > np.pi//2:
             ang_diff -= np.pi
         else: # < -np.pi//2
