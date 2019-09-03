@@ -3,13 +3,12 @@ import math
 
 
 def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
-
-    des_vel, integral_p_err = pi_position_control(
-            state, des_pos, integral_p_err)
-    des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
+    
+    des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
+    des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
     des_theta_deg = np.degrees(des_theta) # for logging
     u = pi_attitude_control(
-        state, des_theta, param_dict)  # attitude control
+        state, des_theta, des_thrust, param_dict)  # attitude control
 
     return u
 
