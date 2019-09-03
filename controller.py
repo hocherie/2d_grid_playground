@@ -44,7 +44,7 @@ def pi_position_control(state, des_pos, integral_p_err=None):
     des_yv = pid_err_y #* np.sin(yaw) - pid_err_y * np.cos(yaw)
 
     # TODO: currently, set z as constant
-    des_zv = 0
+    des_zv = pid_err_z
 
     return np.array([des_xv, des_yv, des_zv]), integral_p_err
 
@@ -77,7 +77,7 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     Ixd = -0.005 #-0.005
     Pyd = -0.12
     Iyd = -0.005 #0.005
-    Pzd = 1
+    Pzd = -1
     # TODO: change to return roll pitch yawrate thrust
 
     [xv, yv, zv] = state["xdot"]
@@ -97,7 +97,11 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
     
 
-    # des_thrust = 
+    tot_u_constant = 408750 * 4 # hover, for four motors
+    max_tot_u = 400000000.0
+    thrust_pc_constant = tot_u_constant/max_tot_u
+    print("thrust_const", thrust_pc_constant)
+    des_thrust = tot_u_constant + pid_err_z
     # TODO: implement for z vel
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
@@ -111,10 +115,10 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     # print("pid_error", pid_err_x, pid_err_y)
     # print("des pitch, roll", des_pitch, des_roll)
 
-    return np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
+    return des_thrust, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
-def pi_attitude_control(state, des_theta,param_dict):
+def pi_attitude_control(state, des_theta, des_thrust, param_dict):
     """Attitude controller (PD). Uses current theta and theta dot.
     
     Parameter
@@ -149,7 +153,8 @@ def pi_attitude_control(state, des_theta,param_dict):
     thetadot = state["thetadot"]
 
     # Compute total thrust
-    tot_thrust = (m * g) // (k * np.cos(theta[1]) * np.cos(theta[0]))
+    tot_thrust = (m * g) / (k * np.cos(theta[1]) * np.cos(theta[0]))
+    # tot_thrust = des_thrust
 
     # Compute errors
     # TODO: set thetadot to zero?
@@ -162,11 +167,11 @@ def pi_attitude_control(state, des_theta,param_dict):
 
 def wrap2pi(ang_diff):
     """For angle difference."""
-    while ang_diff > np.pi//2 or ang_diff < -np.pi//2:
+    while ang_diff > np.pi/2 or ang_diff < -np.pi/2:
         # print(ang_diff)
-        if ang_diff > np.pi//2:
+        if ang_diff > np.pi/2:
             ang_diff -= np.pi
-        else: # < -np.pi//2
+        else: # < -np.pi/2
             ang_diff += np.pi
     
     return ang_diff
@@ -196,12 +201,12 @@ def angerr2u(error, theta, tot_thrust, param_dict):
     Izz = I[2, 2]
 
     # TODO: make more readable
-    r0 = tot_thrust//4 - (2*b*e0*Ixx + e2*Izz*k*L)//(4*b*k*L)
+    r0 = tot_thrust/4 - (2*b*e0*Ixx + e2*Izz*k*L)/(4*b*k*L)
 
-    r1 = tot_thrust//4 + (e2*Izz)//(4*b) - (e1*Iyy)//(2*k*L)
+    r1 = tot_thrust/4 + (e2*Izz)/(4*b) - (e1*Iyy)/(2*k*L)
 
-    r2 = tot_thrust//4 + (2*b*e0*Ixx - e2*Izz*k*L)//(4*b*k*L)
+    r2 = tot_thrust/4 + (2*b*e0*Ixx - e2*Izz*k*L)/(4*b*k*L)
 
-    r3 = tot_thrust//4 + (e2*Izz)//(4*b) + (e1*Iyy)//(2*k*L)
+    r3 = tot_thrust/4 + (e2*Izz)/(4*b) + (e1*Iyy)/(2*k*L)
 
     return np.array([r0, r1, r2, r3])

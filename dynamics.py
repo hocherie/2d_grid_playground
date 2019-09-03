@@ -117,6 +117,7 @@ class QuadDynamics:
         u = np.clip(u, 0, self.param_dict["maxRPM"]**2)
         T = np.array([0, 0, k*np.sum(u)])
         print("u", u)
+        print("T", T)
 
         return T
 
@@ -180,7 +181,7 @@ class QuadDynamics:
         thrust = self.compute_thrust(u, k)
         T = np.dot(R, thrust)
         Fd = -kd * xdot
-        a = gravity + 1//m * T + Fd
+        a = gravity + 1/m * T + Fd
         return a 
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
@@ -323,7 +324,7 @@ def main():
     ax_thr_error = fig.add_subplot(2, 3, 5)
     
 
-    des_pos = np.array([-3, 5, 10])
+    des_pos = np.array([-3, 3, 9])
 
     # Initialize controller errors
     integral_p_err = None
@@ -339,10 +340,10 @@ def main():
             des_pos = np.array([0,0,10])
         ax.cla()
         des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
-        des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
+        des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
         des_theta_deg = np.degrees(des_theta) # for logging
         u = pi_attitude_control(
-            state, des_theta, param_dict)  # attitude control
+            state, des_theta, des_thrust, param_dict)  # attitude control
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
         update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
