@@ -94,6 +94,7 @@ class QuadDynamics:
 
     def compute_thrust(self, u,k):
         """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
+        Clips if above maximum rpm (10000).
 
         thrust = k * sum(u)
         
@@ -110,7 +111,10 @@ class QuadDynamics:
         T : (3, ) np.ndarray
             thrust in body frame
         """
+        RPM_LIMIT = 10000
+        u = np.clip(u, 0, RPM_LIMIT**2)
         T = np.array([0, 0, k*np.sum(u)])
+        # print("u", u)
 
         return T
 
@@ -341,12 +345,12 @@ def main():
         state = quad_dyn.step_dynamics(state, u)
         update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
 
-    # for t in range(100):
-    #     # # Visualize quadrotor and angle error
-    #     ax.cla()
-    #     visualize_quad(ax, hist_x[:t], hist_y[:t], hist_z[:t], hist_pos[t], hist_theta[t])
-    #     visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
-    #                     hist_pos[:t+1], hist_xdot[:t+1], hist_theta[:t+1], hist_des_theta[:t+1], hist_thetadot[:t+1], dt, hist_des_xdot[:t+1], hist_des_x[:t+1])
+    for t in range(100):
+        # # Visualize quadrotor and angle error
+        ax.cla()
+        visualize_quad(ax, hist_x[:t], hist_y[:t], hist_z[:t], hist_pos[t], hist_theta[t])
+        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
+                        hist_pos[:t+1], hist_xdot[:t+1], hist_theta[:t+1], hist_des_theta[:t+1], hist_thetadot[:t+1], dt, hist_des_xdot[:t+1], hist_des_x[:t+1])
 
     print("Time Elapsed:", time.time() - t_start)
 if __name__ == '__main__':

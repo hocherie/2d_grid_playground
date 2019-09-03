@@ -65,9 +65,6 @@ class Robot():
         self.state = self.dynamics.step_dynamics(self.state, u)
         self.x = self.state["x"][0]
         self.y = self.state["x"][1]
-        # self.x += self.pos_cont.u_x
-        # self.y += self.pos_cont.u_y
-        # print(self.x, self.y)
         
 
     def update(self):
@@ -123,8 +120,6 @@ class PositionController():
         # self.lidar.unsafe_range[min_angle_ind] = 1
 
         min_angle_ind = np.argmin(self.lidar.ranges)
-        # print(min_angle_ind)
-        # print(self.lidar.ranges)
         min_range = np.min(self.lidar.ranges)
         self.lidar.reset_unsafe_range()
         
@@ -235,9 +230,9 @@ class LidarSimulator():
                  np.vstack((self.sensed_obs[:, 1], np.ones(len(self.angles)) * pos[1])), 'k', linewidth=0.1)
 
         # Plot unsafe range
-        print(self.unsafe_range)
+        # print(self.unsafe_range)
         unsafe_obs = self.sensed_obs[np.where(self.unsafe_range)]
-        print(unsafe_obs)
+        print("Unsafe Obs: " , unsafe_obs)
         plt.plot(np.vstack((unsafe_obs[:,0], np.ones(len(unsafe_obs)) * pos[0])),
                  np.vstack((unsafe_obs[:, 1], np.ones(len(unsafe_obs)) * pos[1])), 'r', linewidth=0.5)
 

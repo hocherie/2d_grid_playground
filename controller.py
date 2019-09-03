@@ -97,6 +97,7 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
     
 
+    # des_thrust = 
     # TODO: implement for z vel
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
@@ -194,6 +195,7 @@ def angerr2u(error, theta, tot_thrust, param_dict):
     Iyy = I[1, 1]
     Izz = I[2, 2]
 
+    # TODO: make more readable
     r0 = tot_thrust//4 - (2*b*e0*Ixx + e2*Izz*k*L)//(4*b*k*L)
 
     r1 = tot_thrust//4 + (e2*Izz)//(4*b) - (e1*Iyy)//(2*k*L)
