@@ -3,10 +3,10 @@ import math
 
 
 def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
-    
+
     des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
     des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
-    des_theta_deg = np.degrees(des_theta) # for logging
+    # des_theta_deg = np.degrees(des_theta) # for logging
     u = pi_attitude_control(
         state, des_theta, des_thrust, param_dict)  # attitude control
 
@@ -50,8 +50,6 @@ def pi_position_control(state, des_pos, integral_p_err=None):
 def pi_velocity_control(state, des_vel, integral_v_err=None):
     """
     Assume desire zero angular velocity? Also clips min and max roll, pitch.
-
-    #TODO: only for x,y velocity
 
     Parameter
     ---------
@@ -99,10 +97,8 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     tot_u_constant = 408750 * 4 # hover, for four motors
     max_tot_u = 400000000.0
     thrust_pc_constant = tot_u_constant/max_tot_u
-    print("thrust_const", thrust_pc_constant)
     des_thrust_pc = thrust_pc_constant + pid_err_z
-    print("des_thrust_pc", thrust_pc_constant, pid_err_z)
-    # TODO: implement for z vel
+    
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
 
@@ -112,8 +108,6 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
 
     # TODO: currently, set yaw as constant
     des_yaw = state["theta"][2]
-    # print("pid_error", pid_err_x, pid_err_y)
-    # print("des pitch, roll", des_pitch, des_roll)
 
     return des_thrust_pc, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
@@ -170,10 +164,9 @@ def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
 def wrap2pi(ang_diff):
     """For angle difference."""
     while ang_diff > np.pi/2 or ang_diff < -np.pi/2:
-        # print(ang_diff)
         if ang_diff > np.pi/2:
             ang_diff -= np.pi
-        else: # < -np.pi/2
+        else: 
             ang_diff += np.pi
     
     return ang_diff
