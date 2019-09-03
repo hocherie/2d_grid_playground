@@ -324,7 +324,7 @@ def main():
     ax_thr_error = fig.add_subplot(2, 3, 5)
     
 
-    des_pos = np.array([-3, 3, 9])
+    des_pos = np.array([3, -3, 9])
 
     # Initialize controller errors
     integral_p_err = None

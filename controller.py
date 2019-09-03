@@ -21,7 +21,7 @@ def pi_position_control(state, des_pos, integral_p_err=None):
     Ix = 0  # -0.005
     Py = -0.5
     Iy = 0  # 0.005
-    Pz = 1
+    Pz = -1
 
     [x, y, z] = state["x"]
     [x_d, y_d, z_d] = des_pos
@@ -77,7 +77,7 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     Ixd = -0.005 #-0.005
     Pyd = -0.12
     Iyd = -0.005 #0.005
-    Pzd = -1
+    Pzd = -0.001
     # TODO: change to return roll pitch yawrate thrust
 
     [xv, yv, zv] = state["xdot"]
@@ -101,7 +101,8 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     max_tot_u = 400000000.0
     thrust_pc_constant = tot_u_constant/max_tot_u
     print("thrust_const", thrust_pc_constant)
-    des_thrust = tot_u_constant + pid_err_z
+    des_thrust_pc = thrust_pc_constant + pid_err_z
+    print("des_thrust_pc", thrust_pc_constant, pid_err_z)
     # TODO: implement for z vel
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
@@ -115,10 +116,10 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     # print("pid_error", pid_err_x, pid_err_y)
     # print("des pitch, roll", des_pitch, des_roll)
 
-    return des_thrust, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
+    return des_thrust_pc, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
-def pi_attitude_control(state, des_theta, des_thrust, param_dict):
+def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
     """Attitude controller (PD). Uses current theta and theta dot.
     
     Parameter
@@ -152,9 +153,11 @@ def pi_attitude_control(state, des_theta, des_thrust, param_dict):
     theta = state["theta"]
     thetadot = state["thetadot"]
 
-    # Compute total thrust
-    tot_thrust = (m * g) / (k * np.cos(theta[1]) * np.cos(theta[0]))
-    # tot_thrust = des_thrust
+    # Compute total u
+    # tot_thrust = (m * g) / (k * np.cos(theta[1]) * np.cos(theta[0])) # more like tot base u
+    # print("tot_thrust", tot_thrust)
+    max_tot_u = 400000000.0
+    tot_u = des_thrust_pc * max_tot_u
 
     # Compute errors
     # TODO: set thetadot to zero?
@@ -162,7 +165,7 @@ def pi_attitude_control(state, des_theta, des_thrust, param_dict):
     # print("e_theta", e)
 
     # Compute control input given angular error (dynamic inversion)
-    u = angerr2u(e, theta, tot_thrust, param_dict)
+    u = angerr2u(e, theta, tot_u, param_dict)
     return u
 
 def wrap2pi(ang_diff):
