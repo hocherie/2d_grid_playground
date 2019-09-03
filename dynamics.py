@@ -22,7 +22,9 @@ b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
 kd = 0.25
 dt = 0.1
-param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt}
+maxrpm = 10000
+maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
+param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt, "maxRPM":maxrpm, "maxthrust":maxthrust}
 
 hist_theta = []
 hist_des_theta = []
@@ -111,10 +113,10 @@ class QuadDynamics:
         T : (3, ) np.ndarray
             thrust in body frame
         """
-        RPM_LIMIT = 10000
-        u = np.clip(u, 0, RPM_LIMIT**2)
+        
+        u = np.clip(u, 0, self.param_dict["maxRPM"]**2)
         T = np.array([0, 0, k*np.sum(u)])
-        # print("u", u)
+        print("u", u)
 
         return T
 
