@@ -211,15 +211,16 @@ class LidarSimulator():
             pt[1] >= 0 and pt[1] < self.map.height)]
         along_line_pts = np.array(along_line_pts)
         # plt.plot(along_line_pts[:,0], along_line_pts[:,1], '.')
-        along_line_occ = self.map.map[along_line_pts[:,1], along_line_pts[:,0]]
-        # TODO: change to binary
-        closest_obs_coord = along_line_pts[np.where(along_line_occ > 0.99)]
-        if len(closest_obs_coord) == 0: # no obstacles
-            # TODO: make into constant
-            return [MAX_RANGE * np.cos(angle), MAX_RANGE * np.sin(angle)]
-        else:
-            return closest_obs_coord[0]
-            
+        if along_line_pts.size > 0:
+            along_line_occ = self.map.map[along_line_pts[:,1], along_line_pts[:,0]]
+            # TODO: change to binary
+            closest_obs_coord = along_line_pts[np.where(along_line_occ > 0.99)]
+            if len(closest_obs_coord) == 0: # no obstacles
+                # TODO: make into constant
+                return [MAX_RANGE * np.cos(angle), MAX_RANGE * np.sin(angle)]
+            else:
+                return closest_obs_coord[0]
+                
 
     def visualize_lidar(self, pos):
         # Plot hits
