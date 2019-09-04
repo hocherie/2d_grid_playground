@@ -31,11 +31,18 @@
 
 ### Play with Quadrotor Dynamics
 `python dynamics.py`
+
+<img src="docs/3d_quad_sim.gif" width="500">
+
 Robot moves to desired position. (set in `main()`)
 Uses dynamics from second order equations of motion (acceleration, torque) from `dynamics.py`, and cascaded PID controllers for position, velocity, and dynamics inversion (check?) to compute final motor input from `controller.py`.
 
+Code first generates trajectory then visualizes.
+
 ### Play with 2D Grid Simulator
 `python main.py`
+
+<img src="docs/2d_grid.gif" width="300">
 Robot executes naive safe control to stay safe in 2D obstacle environment given range measurements. Calculates opposing vector to closest obstacle to repulse away. Uses dynamics and controllers to move.
 Originally given straight input.
 
