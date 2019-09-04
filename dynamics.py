@@ -116,8 +116,8 @@ class QuadDynamics:
         
         u = np.clip(u, 0, self.param_dict["maxRPM"]**2)
         T = np.array([0, 0, k*np.sum(u)])
-        print("u", u)
-        print("T", T)
+        # print("u", u)
+        # print("T", T)
 
         return T
 
@@ -313,6 +313,11 @@ def main():
     print("start")
     t_start = time.time()
 
+
+    # Set desired position
+    des_pos = np.array([3, -3, 9])
+
+    # Initialize Robot State
     state = init_state()
 
     # Initialize visualization
@@ -324,7 +329,6 @@ def main():
     ax_thr_error = fig.add_subplot(2, 3, 5)
     
 
-    des_pos = np.array([3, -3, 9])
 
     # Initialize controller errors
     integral_p_err = None
