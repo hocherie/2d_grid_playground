@@ -147,18 +147,16 @@ class PositionController():
     def visualize_control(self, pos):
         # original control
         plt.plot([pos[0], pos[0]+self.og_control[0] * DISPSCALE],
-                 [pos[1], pos[1]+self.og_control[1] * DISPSCALE], 'g')
+                 [pos[1], pos[1]+self.og_control[1] * DISPSCALE], 'g', label="Original")
 
         # safe control
         plt.plot([pos[0], pos[0]+self.safe_control[0] * DISPSCALE],
-                 [pos[1], pos[1]+self.safe_control[1] * DISPSCALE], 'r')
+                 [pos[1], pos[1]+self.safe_control[1] * DISPSCALE], 'r', label="Safe")
 
         # final control
         plt.plot([pos[0], pos[0]+self.u_x * DISPSCALE],
-                 [pos[1], pos[1]+self.u_y * DISPSCALE], 'b')
-        # plt.plot(np.vstack((self.sensed_obs[:, 0], np.ones(len(self.angles)) * pos[0])),
-        #          np.vstack((self.sensed_obs[:, 1], np.ones(len(self.angles)) * pos[1])), 'k', linewidth=0.1)
-
+                 [pos[1], pos[1]+self.u_y * DISPSCALE], 'b', label="Final")
+        plt.legend()
 
 class LidarSimulator():
     def __init__(self, map1, angles=np.array(range(10)) * 33):
