@@ -14,11 +14,32 @@
 
 * `visualize_dynamics.py`: Contains graphing-related functions for dynamics.py. Mainly use for tuning PID controllers.
 
+## Getting Started 
 
+### Installation
+1. Clone repo. 
 
+`git clone https://github.com/hocherie/2d_grid_playground.git`
 
+2. Navigate to folder.
+
+`cd 2d_grid_playground`
+
+3. Create conda environment from yml file.
+
+`conda env create -f py37_env.yml`
+
+### Play with Quadrotor Dynamics
+`python dynamics.py`
+Robot moves to desired position. (set in `main()`)
+Uses dynamics from second order equations of motion (acceleration, torque) from `dynamics.py`, and cascaded PID controllers for position, velocity, and dynamics inversion (check?) to compute final motor input from `controller.py`.
+
+### Play with 2D Grid Simulator
+`python main.py`
+Robot executes naive safe control to stay safe in 2D obstacle environment given range measurements. Calculates opposing vector to closest obstacle to repulse away. Uses dynamics and controllers to move.
+Originally given straight input.
 
 
 
 # Author
-Cherie Ho
+Cherie Ho (cherieh@cs.cmu.edu)
