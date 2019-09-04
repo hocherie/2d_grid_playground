@@ -19,7 +19,7 @@ DISPSCALE = 5
 SAFE_RANGE = 30
 
 class Robot():
-    def __init__(self, map1, lidar=None, pos_cont=None):
+    def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
         self.state = {"x": np.array([50, 10, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
@@ -32,6 +32,7 @@ class Robot():
         self.hist_x = []
         self.hist_y = [] 
         self.map = map1
+        self.use_safe = use_safe
 
         # TODO: cleaner way?
         if lidar is None:
@@ -71,7 +72,7 @@ class Robot():
         """Moves robot and updates sensor readings"""
 
         self.lidar.update_reading((self.x, self.y))
-        self.pos_cont.calc_control()
+        self.pos_cont.calc_control(self.use_safe)
         self.move()
         
         
@@ -95,13 +96,14 @@ class PositionController():
     def __init__(self, lidar):
         self.u_x = 0
         self.u_y = 0
-        self.og_control = None
-        self.safe_control = None
+        self.og_control = (0,0)
+        self.safe_control = (0,0)
         self.lidar = lidar
 
-    def calc_control(self):
-        og_control = self.calc_original_control()
-        safe_control = self.calc_safe_control()
+    def calc_control(self, use_safe):
+        self.calc_original_control()
+        if use_safe:
+            self.calc_safe_control()
         self.u_x = self.og_control[0] + self.safe_control[0]
         self.u_y = self.og_control[1] + self.safe_control[1]
 
@@ -134,7 +136,7 @@ class PositionController():
             safe_ux = int((SAFE_RANGE - min_range)//10 * np.cos(unsafe_angle + np.pi))
             safe_uy = int((SAFE_RANGE - min_range)//10 *
                           np.sin(unsafe_angle + np.pi))
-            print("Executing safety maneuvers", safe_ux, safe_uy)
+            # print("Executing safety maneuvers", safe_ux, safe_uy)
         
         else:
             safe_ux = 0
@@ -230,7 +232,7 @@ class LidarSimulator():
         # Plot unsafe range
         # print(self.unsafe_range)
         unsafe_obs = self.sensed_obs[np.where(self.unsafe_range)]
-        print("Unsafe Obs: " , unsafe_obs)
+        # print("Unsafe Obs: " , unsafe_obs)
         plt.plot(np.vstack((unsafe_obs[:,0], np.ones(len(unsafe_obs)) * pos[0])),
                  np.vstack((unsafe_obs[:, 1], np.ones(len(unsafe_obs)) * pos[1])), 'r', linewidth=0.5)
 
