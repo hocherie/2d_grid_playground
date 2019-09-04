@@ -7,8 +7,11 @@ Contains functions to evaluate safe control methods. Should contain multiple met
 from simulator import Map, LidarSimulator, Robot
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import math
 import random
+
+color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 def distance_to_closest_obstacle(dense_lidar, robot):
     """Input: state, maps.
@@ -35,7 +38,9 @@ def main():
     unsafe_closest_list = []
 
     for i in range(100):
+
         plt.cla()
+
         # Move robot
         safe_robbie.update()
         unsafe_robbie.update()
@@ -46,14 +51,24 @@ def main():
     
         unsafe_closest = distance_to_closest_obstacle(dense_lidar, unsafe_robbie)
         unsafe_closest_list.append(unsafe_closest)
-        # print("Closest", closest)
         # TODO: write to text file
 
         # # Visualize
         # map1.visualize_map()
-        # robbie.visualize()
+        # safe_robbie.visualize()
         # plt.pause(0.1)
-    
+
+
+    # Visualize history
+    map1.visualize_map()
+    safe_robbie.visualize_robot()
+    unsafe_robbie.visualize_robot()
+    custom_legend = [Line2D([0], [0], color=color_cycle[0], lw=4),
+                Line2D([0], [0], color=color_cycle[1], lw=4)]
+    plt.legend(custom_legend, ["Safe Control", "Unsafe Control"])
+
+    # Plot Closest Distance over Time
+    plt.figure()
     plt.plot(range(len(safe_closest_list)), safe_closest_list, label="Safe")
     plt.plot(range(len(unsafe_closest_list)), unsafe_closest_list, label="Unsafe")
     plt.legend()
