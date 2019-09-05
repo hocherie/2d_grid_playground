@@ -20,7 +20,7 @@ SAFE_RANGE = 30
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
-        self.state = {"x": np.array([50, 10, 10]),
+        self.state = {"x": np.array([60, 10, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                       # ! hardcoded
@@ -56,25 +56,26 @@ class Robot():
         self.lidar.visualize_lidar((self.x, self.y))
         self.pos_cont.visualize_control((self.x, self.y))
 
-    def move(self):
+    def move(self, des_theta):
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
 
         # des_pos = np.array(
         #     [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
-        des_pos = np.array([60,30,10])
-        u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
+        # des_pos = np.array([60,30,10])
+        u = pi_attitude_control(self.state, des_theta=des_theta, des_thrust_pc=0.0040875, param_dict=self.dynamics.param_dict)
+        # u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
         self.state = self.dynamics.step_dynamics(self.state, u)
         self.x = self.state["x"][0]
         self.y = self.state["x"][1]
         
 
-    def update(self):
+    def update(self, des_theta):
         """Moves robot and updates sensor readings"""
 
         self.lidar.update_reading((self.x, self.y))
-        self.pos_cont.calc_control(self.use_safe)
-        self.move()
+        # self.pos_cont.calc_control(self.use_safe)
+        self.move(des_theta)
         
         
 
