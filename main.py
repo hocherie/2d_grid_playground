@@ -26,7 +26,9 @@ def main():
         # Get safe cmd
         safe_atti_cmd = compute_safe_atti_cmd(safe_robbie.state, safe_robbie.lidar.ranges, safe_robbie.lidar.angles)
         [roll, pitch, yr, thrust] = safe_atti_cmd
-        print("roll, pitch", roll, pitch)
+        print("roll, pitch", np.degrees(roll), np.degrees(pitch))
+        roll = np.clip(roll, np.radians(-30), np.radians(30))
+        pitch = np.clip(pitch, np.radians(-30), np.radians(30))
         # Move robot
         safe_robbie.update([roll, pitch, 0])
 
