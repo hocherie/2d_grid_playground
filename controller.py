@@ -1,12 +1,26 @@
 import numpy as np
 import math 
 
+def go_to_velocity(state, des_vel, param_dict, integral_v_err=None):
+    """
+    Computes input need for desired velocity. Uses cascadeed velocity and attitude controller.
+    Function to call by other code. 
+    """
+
+    des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # velocity control
+    u = pi_attitude_control(
+        state, des_theta, des_thrust, param_dict)  # attitude control
+
+    return u
 
 def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
+    """
+    Computes input need for desired velocity. Uses cascadeed velocity and attitude controller.
+    Function to call by other code. 
+    """
 
     des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
-    des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
-    # des_theta_deg = np.degrees(des_theta) # for logging
+    des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # velocity control
     u = pi_attitude_control(
         state, des_theta, des_thrust, param_dict)  # attitude control
 
@@ -102,7 +116,7 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
 
-    # TODO: move to attitude controller?
+    # TODO: copy to dynamics.py
     des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
     des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
 
