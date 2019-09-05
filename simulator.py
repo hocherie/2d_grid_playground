@@ -16,7 +16,7 @@ from controller import *
 
 MAX_RANGE = 1000
 DISPSCALE = 5
-SAFE_RANGE = 30
+DANGER_RANGE = 5
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
@@ -56,27 +56,36 @@ class Robot():
         self.lidar.visualize_lidar((self.x, self.y))
         self.pos_cont.visualize_control((self.x, self.y))
 
-    def move(self, des_theta):
+    def move(self,u):
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
 
-        u = pi_attitude_control(self.state, des_theta=des_theta, des_thrust_pc=0.0040875, param_dict=self.dynamics.param_dict)
+        
         # des_pos = [60, 30 ,10]
         # des_pos = np.array(
         #     [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
         # u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
         self.state = self.dynamics.step_dynamics(self.state, u)
-        print("Actual", np.degrees(self.state["theta"]))
+        # print("Actual", np.degrees(self.state["theta"]))
         self.x = self.state["x"][0]
         self.y = self.state["x"][1]
         
 
-    def update(self, des_theta):
+    def update(self, safe_theta=None):
         """Moves robot and updates sensor readings"""
 
         self.lidar.update_reading((self.x, self.y), self.state["theta"][2])
-        self.pos_cont.calc_control(self.use_safe)
-        self.move(des_theta)
+
+        # TODO: handle switching in controller
+        if safe_theta:
+            print("Using safe control", safe_theta)
+            u = pi_attitude_control(self.state, des_theta=safe_theta, des_thrust_pc=0.0040875, param_dict=self.dynamics.param_dict)
+        else:
+            print("normal control")
+            des_pos = np.array([60,60,10])
+            u  = go_to_position(self.state, des_pos, self.dynamics.param_dict)
+        print(u)
+        self.move(u)
         
         
 
@@ -135,7 +144,7 @@ class PositionController():
         min_range = np.min(self.lidar.ranges)
         self.lidar.reset_unsafe_range()
         
-        if min_range < SAFE_RANGE:
+        if min_range < DANGER_RANGE:
             self.lidar.reset_unsafe_range()
             self.lidar.unsafe_range[min_angle_ind] = 1
 
@@ -143,8 +152,8 @@ class PositionController():
             unsafe_angle = self.lidar.angles[min_angle_ind]
 
             # TODO: cast to int
-            safe_ux = int((SAFE_RANGE - min_range)//10 * np.cos(unsafe_angle + np.pi))
-            safe_uy = int((SAFE_RANGE - min_range)//10 *
+            safe_ux = int((DANGER_RANGE - min_range)//10 * np.cos(unsafe_angle + np.pi))
+            safe_uy = int((DANGER_RANGE - min_range)//10 *
                           np.sin(unsafe_angle + np.pi))
             # print("Executing safety maneuvers", safe_ux, safe_uy)
         
@@ -247,6 +256,7 @@ class LidarSimulator():
 
         # Plot unsafe range
         # print(self.unsafe_range)
+        
         unsafe_obs = self.sensed_obs[np.where(self.unsafe_range)]
         # print("Unsafe Obs: " , unsafe_obs)
         plt.plot(np.vstack((unsafe_obs[:,0], np.ones(len(unsafe_obs)) * pos[0])),

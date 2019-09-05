@@ -24,13 +24,19 @@ def main():
         plt.cla()
 
         # Get safe cmd
-        safe_atti_cmd = compute_safe_atti_cmd(safe_robbie.state, safe_robbie.lidar.ranges, safe_robbie.lidar.angles)
-        [roll, pitch, yr, thrust] = safe_atti_cmd
-        print("roll, pitch", np.degrees(roll), np.degrees(pitch))
-        roll = np.clip(roll, np.radians(-30), np.radians(30))
-        pitch = np.clip(pitch, np.radians(-30), np.radians(30))
-        # Move robot
-        safe_robbie.update([roll, pitch, 0])
+        safe_trigger, safe_atti_cmd = compute_safe_atti_cmd(safe_robbie.state, safe_robbie.lidar.ranges, safe_robbie.lidar.angles)
+        
+        if safe_trigger: # use safe att cmd
+            [roll, pitch, yr, thrust] = safe_atti_cmd
+            print("roll, pitch", np.degrees(roll), np.degrees(pitch))
+            roll = np.clip(roll, np.radians(-30), np.radians(30))
+            pitch = np.clip(pitch, np.radians(-30), np.radians(30))
+            safe_robbie.update(safe_theta=[roll, pitch, 0])
+        else:
+            safe_robbie.update()
+
+
+        
 
         # Evaluation: Get distance to closest obstacle w/ dense lidar
         # safe_closest = distance_to_closest_obstacle(dense_lidar, safe_robbie)

@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 import math
 import random
 
-SAFE_RANGE = 100
+DANGER_RANGE = 30
 
 def compute_safe_atti_cmd(state, ranges, angles):
     """
@@ -25,9 +25,9 @@ def compute_safe_atti_cmd(state, ranges, angles):
 
     # 1. Get closest range measurement and angle
     closest_range = np.min(ranges)
-    print("closest", closest_range)
+    
     closest_angle = angles[np.argmin(ranges)] # relative to body
-    # TODO: confirm orientation
+    print("closest", closest_range, closest_angle)
 
     # # 2. Get current body velocity #TODO can we do without velocity (may be noisy)
     # world_vel = state["xdot"]
@@ -36,11 +36,15 @@ def compute_safe_atti_cmd(state, ranges, angles):
     # body_vel = np.dot(R, world_vel)
 
     # 3. Calculate potential field gain based on closest distance
-    apf_gain = np.clip(int((SAFE_RANGE - closest_range))/300, a_min=0, a_max=None) # active if negative #! hardcoded denominator
+    
+    # apf_function = (DANGER_RANGE - closest_range)/5
+    # apf_gain = np.clip(apf_function, a_min=0, a_max=None) # active if negative #! hardcoded denominator
 
+    apf_gain = np.radians(30)
     # 4. Calculate roll and pitch for opposing vector 
-    safe_pitch  = -apf_gain * np.cos(closest_angle)  #! DEBUG
     safe_roll   = apf_gain  * np.sin(closest_angle)
+    safe_pitch  = -apf_gain * np.cos(closest_angle) 
+    
 
     #! TODO: Hardcode safe yawrate as zero, and safe_thrust for general hover
     safe_yr = 0
@@ -48,7 +52,9 @@ def compute_safe_atti_cmd(state, ranges, angles):
 
     attitude_cmd = [safe_roll, safe_pitch, safe_yr, safe_thrust]
 
-    return attitude_cmd
+    safe_trigger =  closest_range < DANGER_RANGE # use control if unsafe
+
+    return safe_trigger, attitude_cmd
 
 def main():
    pass 
