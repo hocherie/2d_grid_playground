@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 import math
 import random
 
-DANGER_RANGE = 30
+DANGER_RANGE = 5
 
 def compute_safe_atti_cmd(state, ranges, angles):
     """
@@ -27,7 +27,7 @@ def compute_safe_atti_cmd(state, ranges, angles):
     closest_range = np.min(ranges)
     
     closest_angle = angles[np.argmin(ranges)] # relative to body
-    print("closest", closest_range, closest_angle)
+    # print("closest", closest_range, closest_angle)
 
     # # 2. Get current body velocity #TODO can we do without velocity (may be noisy)
     # world_vel = state["xdot"]
@@ -44,7 +44,11 @@ def compute_safe_atti_cmd(state, ranges, angles):
     # 4. Calculate roll and pitch for opposing vector 
     safe_roll   = apf_gain  * np.sin(closest_angle)
     safe_pitch  = -apf_gain * np.cos(closest_angle) 
-    
+
+    safe_roll = apf_gain
+    safe_pitch = -apf_gain 
+    # safe_roll = apf_gain
+    # safe_pitch = apf_gain
 
     #! TODO: Hardcode safe yawrate as zero, and safe_thrust for general hover
     safe_yr = 0

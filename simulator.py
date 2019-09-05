@@ -20,7 +20,7 @@ DANGER_RANGE = 5
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
-        self.state = {"x": np.array([60, 10, 10]),
+        self.state = {"x": np.array([60, 60, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                       # ! hardcoded
@@ -71,20 +71,22 @@ class Robot():
         self.y = self.state["x"][1]
         
 
-    def update(self, safe_theta=None):
+    def update(self, safe_theta=None, safe_kp=30):
         """Moves robot and updates sensor readings"""
 
         self.lidar.update_reading((self.x, self.y), self.state["theta"][2])
 
         # TODO: handle switching in controller
         if safe_theta:
-            print("Using safe control", safe_theta)
-            u = pi_attitude_control(self.state, des_theta=safe_theta, des_thrust_pc=0.0040875, param_dict=self.dynamics.param_dict)
+            # print("Using safe control", safe_theta)
+            u = pi_attitude_control(self.state, des_theta=safe_theta, des_thrust_pc=0.0040875, param_dict=self.dynamics.param_dict, Kp=safe_kp)
         else:
-            print("normal control")
-            des_pos = np.array([60,60,10])
-            u  = go_to_position(self.state, des_pos, self.dynamics.param_dict)
-        print(u)
+            # print("normal control")
+            # des_pos = np.array([60,80,10])
+            des_vel = np.array([0,5,0])
+            u = go_to_velocity(self.state, des_vel, self.dynamics.param_dict)
+            # u  = go_to_position(self.state, des_pos, self.dynamics.param_dict, vel_limit=3)
+        # print(u)
         self.move(u)
         
         
@@ -121,8 +123,8 @@ class PositionController():
 
     def calc_control(self, use_safe):
         self.calc_original_control()
-        if use_safe:
-            self.calc_safe_control()
+        # if use_safe:
+        self.calc_safe_control()
         self.u_x = self.og_control[0] + self.safe_control[0]
         self.u_y = self.og_control[1] + self.safe_control[1]
 
@@ -205,6 +207,9 @@ class LidarSimulator():
         self.sensed_obs = np.array(closest_obs)
 
         self.ranges = self.get_ranges(pos)
+        if np.min(self.ranges) < DANGER_RANGE:
+            self.reset_unsafe_range()
+            self.unsafe_range[np.argmin(self.ranges)] = 1
 
     def get_ranges(self, pos):
         """Get ranges given sensed obstacles"""

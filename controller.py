@@ -13,13 +13,14 @@ def go_to_velocity(state, des_vel, param_dict, integral_v_err=None):
 
     return u
 
-def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
+def go_to_position(state, des_pos, param_dict, vel_limit=None, integral_p_err=None, integral_v_err=None):
     """
     Computes input need for desired velocity. Uses cascadeed velocity and attitude controller.
     Function to call by other code. 
     """
 
     des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
+    des_vel = np.clip(des_vel, -vel_limit, vel_limit)
     des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # velocity control
     u = pi_attitude_control(
         state, des_theta, des_thrust, param_dict)  # attitude control
@@ -126,7 +127,7 @@ def pi_velocity_control(state, des_vel, integral_v_err=None):
     return des_thrust_pc, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
-def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
+def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict, Kp=30):
     """Attitude controller (PD). Uses current theta and theta dot.
     
     Parameter
@@ -145,7 +146,7 @@ def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
     """
 
     Kd = 10
-    Kp = 30
+    # Kp = 30
 
     # TODO: make into class, have param_dict as class member
     g = param_dict["g"]
@@ -159,7 +160,7 @@ def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
 
     theta = state["theta"]
     thetadot = state["thetadot"]
-    
+
     # Compute total u
     # tot_thrust = (m * g) / (k * np.cos(theta[1]) * np.cos(theta[0])) # more like tot base u
     # print("tot_thrust", tot_thrust)
