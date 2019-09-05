@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 import math
 import random
 
-SAFE_RANGE = 5
+SAFE_RANGE = 20
 
 def compute_safe_atti_cmd(state, ranges, angles):
     """
@@ -22,6 +22,7 @@ def compute_safe_atti_cmd(state, ranges, angles):
     att : (4, ) np.ndarray
         [roll, pitch, yaw rate, thrust]
     """
+
     # 1. Get closest range measurement and angle
     closest_range = np.min(ranges)
     print("closest", closest_range)
@@ -35,11 +36,11 @@ def compute_safe_atti_cmd(state, ranges, angles):
     # body_vel = np.dot(R, world_vel)
 
     # 3. Calculate potential field gain based on closest distance
-    apf_gain = np.clip(int((SAFE_RANGE - closest_range))/20, a_min=None, a_max=0) # active if negative #! hardcoded denominator
+    apf_gain = np.clip(int((SAFE_RANGE - closest_range))/100, a_min=0, a_max=None) # active if negative #! hardcoded denominator
 
     # 4. Calculate roll and pitch for opposing vector 
-    safe_roll  = apf_gain * closest_angle*np.cos(closest_angle) 
-    safe_pitch = apf_gain * closest_angle*np.sin(closest_angle)
+    safe_pitch  = -apf_gain * closest_angle*np.cos(closest_angle)  #! DEBUG
+    safe_roll   = apf_gain * closest_angle*np.sin(closest_angle)
 
     #! TODO: Hardcode safe yawrate as zero, and safe_thrust for general hover
     safe_yr = 0
@@ -67,6 +68,8 @@ def main():
         # Get safe cmd
         safe_atti_cmd = compute_safe_atti_cmd(safe_robbie.state, safe_robbie.lidar.ranges, safe_robbie.lidar.angles)
         [roll, pitch, yr, thrust] = safe_atti_cmd
+        roll = np.clip(roll, np.radians(-30), np.radians(30))
+        pitch = np.clip(pitch, np.radians(-30), np.radians(30))
         # Move robot
         safe_robbie.update([roll, pitch, 0])
 
