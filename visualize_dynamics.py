@@ -42,10 +42,14 @@ def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
         [[-plot_L, 0, 0], [plot_L, 0, 0], [0, -plot_L, 0], [0, plot_L, 0], [0, 0, 0], [0, 0, 0]]).T
     quad_ends_world = np.dot(R, quad_ends_body) + np.matlib.repmat(x, 6, 1).T
     # Plot Rods
-    ax.plot3D(quad_ends_world[0, 0:2],
-              quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'r')
+    ax.plot3D(quad_ends_world[0, [1,5]],
+              quad_ends_world[1, [1,5]], quad_ends_world[2, [1,5]], 'r') # body x front
+    ax.plot3D(quad_ends_world[0, [0,5]],
+              quad_ends_world[1, [0,5]], quad_ends_world[2, [0,5]], 'k') # body x back
+    # ax.plot3D(quad_ends_world[0, 0:2],
+    #           quad_ends_world[1, 0:2], quad_ends_world[2, 0:2], 'r') # body x
     ax.plot3D(quad_ends_world[0, 2:4],
-              quad_ends_world[1, 2:4], quad_ends_world[2, 2:4], 'b')
+              quad_ends_world[1, 2:4], quad_ends_world[2, 2:4], 'b') # body y
     # Plot drone center
     ax.scatter3D(x[0], x[1], x[2], edgecolor="r", facecolor="r")
 
