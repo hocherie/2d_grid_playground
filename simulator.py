@@ -60,8 +60,9 @@ class Robot():
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
 
-        des_pos = np.array(
-            [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
+        # des_pos = np.array(
+        #     [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
+        des_pos = np.array([60,30,10])
         u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
         self.state = self.dynamics.step_dynamics(self.state, u)
         self.x = self.state["x"][0]

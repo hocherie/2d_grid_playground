@@ -41,7 +41,7 @@ def init_state():
     """Initialize state dictionary. """
     state = {"x": np.array([5, 0, 10]) , 
                 "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 30])),  # ! hardcoded
+                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                 "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
                 }
     return state
@@ -320,7 +320,7 @@ def main():
     # Initialize Robot State
     state = init_state()
 
-    # Initialize visualization
+    # Initialize visualization #TODO: move to visualize_dynamics
     fig = plt.figure()
     ax = fig.add_subplot(2, 3, 1, projection='3d')
     ax_x_error = fig.add_subplot(2, 3, 2)
@@ -345,6 +345,7 @@ def main():
         ax.cla()
         des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
         des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
+        
         des_theta_deg = np.degrees(des_theta) # for logging
         u = pi_attitude_control(
             state, des_theta, des_thrust, param_dict)  # attitude control
