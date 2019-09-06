@@ -23,7 +23,6 @@ class Robot():
         self.state = {"x": np.array([50, 10, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
-                      # ! hardcoded
                       "thetadot": np.radians(np.array([0, 0, 0]))
                       }
         self.x = self.state["x"][0]
@@ -36,7 +35,7 @@ class Robot():
 
         # TODO: cleaner way?
         if lidar is None:
-            self.lidar = LidarSimulator(map1, angles=np.array([0.0]))
+            self.lidar = LidarSimulator(map1)
         else:
             self.lidar = lidar
 
@@ -60,9 +59,8 @@ class Robot():
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
 
-        des_pos = [60, 30 ,10]
-        # des_pos = np.array(
-        #     [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
+        des_pos = np.array(
+            [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
         u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
         self.state = self.dynamics.step_dynamics(self.state, u)
         self.x = self.state["x"][0]
