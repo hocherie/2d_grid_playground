@@ -13,8 +13,6 @@ def main():
     src_path_map = "data/two_obs.dat"
     map1 = Map(src_path_map)
 
-    # lidar = LidarSimulator(map1)
-
     # initialize robot (initializes lidar with map) 
     robbie = Robot(map1)
 

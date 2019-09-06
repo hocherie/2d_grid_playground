@@ -145,7 +145,7 @@ def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
 
     theta = state["theta"]
     thetadot = state["thetadot"]
-
+    
     # Compute total u
     # tot_thrust = (m * g) / (k * np.cos(theta[1]) * np.cos(theta[0])) # more like tot base u
     # print("tot_thrust", tot_thrust)

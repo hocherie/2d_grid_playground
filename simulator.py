@@ -23,7 +23,6 @@ class Robot():
         self.state = {"x": np.array([50, 10, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
-                      # ! hardcoded
                       "thetadot": np.radians(np.array([0, 0, 0]))
                       }
         self.x = self.state["x"][0]
@@ -71,7 +70,7 @@ class Robot():
     def update(self):
         """Moves robot and updates sensor readings"""
 
-        self.lidar.update_reading((self.x, self.y))
+        self.lidar.update_reading((self.x, self.y), self.state["theta"][2])
         self.pos_cont.calc_control(self.use_safe)
         self.move()
         
@@ -80,7 +79,7 @@ class Robot():
 
 class Map():
     def __init__(self, src_path_map):
-        self.map = np.genfromtxt(src_path_map)
+        self.map = np.flipud(np.genfromtxt(src_path_map))
         self.width = self.map.shape[1] #TODO: check
         self.height = self.map.shape[0]
         self.max_dist = math.sqrt(self.width**2 + self.height**2)
@@ -88,8 +87,15 @@ class Map():
             str(self.width) + "and height " + str(self.height))
 
     def visualize_map(self):
+        # x = np.arange(0, self.height)
+        # y = np.arange(0, self.width)
+
+        # xx, yy = np.meshgrid(x, y)
+        # plt.contourf(x, y, self.map.T, cmap='Greys')
         plt.imshow(self.map, cmap='Greys')
         plt.axis([0, self.width, 0, self.height])
+        plt.xlabel("x")
+        plt.ylabel("y")
 
 
 class PositionController():
@@ -161,7 +167,7 @@ class PositionController():
         plt.legend()
 
 class LidarSimulator():
-    def __init__(self, map1, angles=np.array(range(10)) * 33):
+    def __init__(self, map1, angles=np.array(range(10)) * 33): 
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
         self.map = map1 #TODO: move to robot?
@@ -179,10 +185,10 @@ class LidarSimulator():
 
         return list(bresenham(int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1])))
 
-    def update_reading(self, pos):
+    def update_reading(self, pos, cur_yaw):
         """Update sensed obstacle locations and ranges."""
         closest_obs = [self.get_closest_obstacle(
-            pos, angle) for angle in self.angles]
+            pos, angle + cur_yaw) for angle in self.angles]
         self.sensed_obs = np.array(closest_obs)
 
         self.ranges = self.get_ranges(pos)
@@ -200,7 +206,7 @@ class LidarSimulator():
 
         
     def get_closest_obstacle(self, pos, angle):
-        """"Get closest obs position given angle."""
+        """"Get closest obs position given angle. Gives in map coordinate (NEU)."""
         end_point_x = int(round(self.map.max_dist * np.cos(angle) + pos[0]))
         end_point_y = int(round(self.map.max_dist * np.sin(angle) + pos[1]))
         end_point = (end_point_x, end_point_y)
@@ -221,6 +227,11 @@ class LidarSimulator():
             else:
                 return closest_obs_coord[0]
                 
+    # def image_to_map_coord(self, image_coord):
+    #     return (image_coord[1], image_coord[0])
+
+    # def map_to_image_coord(self, map_coord):
+    #     return ()
 
     def visualize_lidar(self, pos):
         # Plot hits
