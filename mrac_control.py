@@ -31,12 +31,11 @@ class MRAC_control:
         self.v_ad = np.zeros((3,))  # Output of adaptive element
         self.v_lc = np.zeros((3,)) # Output of linear compensator
         self.v_tot = np.zeros((3,))
-        self.model_track_err  = None  
+        self.model_track_error = np.zeros((6,))
         self.cmd = None # Final output to actuator
 
         # Parameters
-        self.lc_param = {"P": 1, "D": 0}
-        # self.x = None # current state
+        self.lc_param = {"P": 1, "D": 1} #! handtuned
 
     def ref_model(self):
         """Linear reference model. Minimizes error
@@ -80,13 +79,11 @@ class MRAC_control:
 
         """
           # TODO: move to object init?
-        self.model_track_error = np.array([1,0,0, 0,0,0]) #! mock. position x 3, velocity x 3
+        # self.model_track_error = np.array([1,0,0, 0,0,0]) #! mock. position x 3, velocity x 3
 
         error_pos = self.model_track_error[0:3] # reference - state
-        error_vel = self.model_track_error[3:]
-
-        print(error_pos)
-        self.v_lc = self.lc_param["P"] * error_pos + self.lc_param["D"] * error_vel
+        des_vel = self.lc_param["P"] * error_pos
+        self.v_lc = self.lc_param["D"] * (des_vel - self.state["xdot"])
         
         
 
@@ -163,7 +160,9 @@ class MRAC_control:
 
     def update_model_track_err(self):
         "model_track_err = x_r - x"
-        pass
+        self.x_r = np.array([7,3,10, 0, 0, 0]) #! mock
+        self.model_track_error = self.x_r - np.hstack((self.state["x"], self.state["xdot"]))
+        print(self.model_track_error)
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
@@ -175,8 +174,8 @@ def main():
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
              "xdot": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, 25])),  # ! hardcoded
-             "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
+             "theta": np.radians(np.array([0, 0, -25])),  
+             "thetadot": np.radians(np.array([0, 0, 0]))  
              }
              
     # Initialize MRAC controller
@@ -202,12 +201,14 @@ def main():
     integral_v_err = None
 
     # Set desired position
-    des_pos = np.array([3, -3, 9])
+    des_pos = np.array([7, 3, 10])
     
     # Step through simulation
     for t in range(100):
 
         # MRAC Loop
+        mrac.update_model_track_err() # updates model_track_err
+        print(mrac.model_track_error)
         mrac.linear_compensator() # updates v_lc
         mrac.compute_v_tot() # sums to v_tot
         des_theta = mrac.dynamic_inversion(quad_dyn.param_dict)
@@ -222,12 +223,13 @@ def main():
             des_theta), des_vel, des_pos, quad_dyn.param_dict["dt"])
 
     print("plotting")
-    for t in range(100):
-        # # Visualize quadrotor and angle error
-        ax.cla()
-        visualize_quad_quadhist(ax, quad_hist, t)
-        visualize_error_quadhist(
-            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"])
-
+    # for t in range(100):
+    t = 99
+    # # Visualize quadrotor and angle error
+    ax.cla()
+    visualize_quad_quadhist(ax, quad_hist, t)
+    visualize_error_quadhist(
+        ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"])
+    plt.show()
 if __name__ == '__main__':
     main()
