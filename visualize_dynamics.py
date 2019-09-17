@@ -157,6 +157,6 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_e
     ax_xdd_error.plot(np.array(range(len(hist_theta))) *
                       dt, np.array(hist_xdotdot)[:, 2], 'r')
     ax_xdd_error.legend(["x", "y", "z"])
-    ax_xdd_error.set_title("Acceleration")
+    ax_xdd_error.set_title("Acc. (world)")
     
     plt.pause(0.1)

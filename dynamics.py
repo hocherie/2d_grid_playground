@@ -32,7 +32,7 @@ def init_state():
     """Initialize state dictionary. """
     state = {"x": np.array([5, 0, 10]) , 
                 "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 30])),  # ! hardcoded
+                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                 "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
                 }
     return state
