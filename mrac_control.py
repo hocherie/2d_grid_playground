@@ -210,11 +210,13 @@ def main():
     integral_p_err = None
     integral_v_err = None
 
-    # Set desired position
-    des_pos = np.array([7, 3, 10])
-    mrac.x_c = np.hstack((des_pos, np.array([0,0,0])))
+
     # Step through simulation
     for t in range(100):
+
+        # Set desired position
+        des_pos = np.array([5 + np.sin(0.1*t), 0.01*t, 10])
+        mrac.x_c = np.hstack((des_pos, np.array([0, 0, 0])))
 
         # MRAC Loop
         mrac.update_model_track_err() # updates model_track_err
