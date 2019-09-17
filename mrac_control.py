@@ -78,8 +78,6 @@ class MRAC_control:
             output from linear compensator
 
         """
-          # TODO: move to object init?
-        # self.model_track_error = np.array([1,0,0, 0,0,0]) #! mock. position x 3, velocity x 3
 
         error_pos = self.model_track_error[0:3] # reference - state
         des_vel = self.lc_param["P"] * error_pos
