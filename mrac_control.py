@@ -96,7 +96,6 @@ class MRAC_control:
         self.v_tot = np.array([1,0,0]) #! mock
 
         # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf
-        # TODO: is u1 in world frame
         U1 = np.linalg.norm(self.v_tot + np.array([0, 0, param_dict["g"]]))
         des_pitch_noyaw =  np.arcsin(self.v_tot[0] / U1)
         des_angle = [des_pitch_noyaw,
@@ -166,7 +165,7 @@ def main():
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
                 "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 30])),  # ! hardcoded
+                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                 "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
                 }
     # Initialize quadrotor dynamics and logger and parameters
