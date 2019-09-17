@@ -74,6 +74,7 @@ class MRAC_control:
 
     def dynamic_inversion(self, state, param_dict):
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
+        Similar to control allocator.
 
         Parameters
         ----------
@@ -90,11 +91,20 @@ class MRAC_control:
 
         """
         yaw = state["theta"][2]
-        
-        # specific_force = 
-        self.v_tot = np.array([0,1,0])#! mock
-        des_pitch = self.v_tot[0] * np.cos(yaw) + self.v_tot[1] * np.sin(yaw) # TODO: need to incorporate specific force?
-        des_roll = self.v_tot[0] * np.sin(yaw) - self.v_tot[1] * np.cos(yaw)
+        # tot_u_constant = 408750 * 4  # hover, for four motors
+        # specific_force = tot_u_constant  / param_dict["m"] 
+        self.v_tot = np.array([1,0,0]) #! mock
+
+        # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf
+        # TODO: is u1 in world frame
+        U1 = np.linalg.norm(self.v_tot + np.array([0, 0, param_dict["g"]]))
+        des_pitch_noyaw =  np.arcsin(self.v_tot[0] / U1)
+        des_angle = [des_pitch_noyaw,
+                     np.arcsin(self.v_tot[1] / (U1 * np.cos(des_pitch_noyaw)))]
+        des_pitch = des_angle[0] * np.cos(yaw) + des_angle[1] * np.sin(yaw)
+        des_roll = des_angle[0] * np.sin(yaw) - des_angle[1] * np.cos(yaw)
+        # des_pitch = angle_tot[0] * np.cos(yaw) + angle_tot[1] * np.sin(yaw)
+        # des_roll = angle_tot[0] * np.sin(yaw) - angle_tot[1] * np.cos(yaw)
 
         # TODO: move to attitude controller?
         des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
