@@ -8,10 +8,11 @@ def visualize_quad_quadhist(ax, quad_hist, t):
                    quad_hist.hist_z[:t], quad_hist.hist_pos[t], quad_hist.hist_theta[t])
 
 
-def visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist,t, dt):
+def visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist,t, dt):
     """Works with QuadHist class."""
-    visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
-                    quad_hist.hist_pos[:t+1], quad_hist.hist_xdot[:t+1], quad_hist.hist_theta[:t+1], quad_hist.hist_des_theta[:t+1], quad_hist.hist_thetadot[:t+1], dt, quad_hist.hist_des_xdot[:t+1], quad_hist.hist_des_x[:t+1])
+    visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error,
+                    quad_hist.hist_pos[:t+1], quad_hist.hist_xdot[:t+1], quad_hist.hist_theta[:t+1], quad_hist.hist_des_theta[:t+1], quad_hist.hist_thetadot[:t+1], dt, quad_hist.hist_des_xdot[:t+1], quad_hist.hist_des_x[:t+1],
+                    quad_hist.hist_xdotdot[:t+1])
 
 def animate_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     """Plot quadrotor 3D position and history"""
@@ -76,7 +77,7 @@ def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     plt.pause(0.1)
 
 
-def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x):
+def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x, hist_xdotdot):
     # pass
     # ax.plot([0,1], [1,10],'b')
 
@@ -144,5 +145,18 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, hist_pos
     # ax.plot(range(len(hist_theta)), np.array(des_theta)[:, 0])
     ax_thr_error.legend(["Roll Rate", "Pitch Rate", "Yaw Rate"])
     ax_thr_error.set_ylim(-100, 100)
-    plt.pause(0.1)
+    
     ax_thr_error.set_title("Angular Rate")
+
+
+    # Acceleration
+    ax_xdd_error.plot(np.array(range(len(hist_theta))) *
+                     dt, np.array(hist_xdotdot)[:, 0], 'k')
+    ax_xdd_error.plot(np.array(range(len(hist_theta))) *
+                      dt, np.array(hist_xdotdot)[:, 1], 'b')
+    ax_xdd_error.plot(np.array(range(len(hist_theta))) *
+                      dt, np.array(hist_xdotdot)[:, 2], 'r')
+    ax_xdd_error.legend(["x", "y", "z"])
+    ax_xdd_error.set_title("Acceleration")
+    
+    plt.pause(0.1)
