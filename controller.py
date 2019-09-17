@@ -10,7 +10,7 @@ def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_e
     u = pi_attitude_control(
         state, des_theta, des_thrust, param_dict)  # attitude control
 
-    return u
+    return u, des_theta, des_vel, des_pos
 
 def pi_position_control(state, des_pos, integral_p_err=None):
     if integral_p_err is None:

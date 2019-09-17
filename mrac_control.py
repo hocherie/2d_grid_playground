@@ -15,8 +15,9 @@ Includes:
 * Dynamic Inversion
 
 """
-from dynamics import QuadDynamics
+from dynamics import QuadDynamics, QuadHistory
 from controller import go_to_position
+from visualize_dynamics import visualize_error_quadhist, visualize_quad_quadhist
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -120,8 +121,9 @@ def main():
                 "theta": np.radians(np.array([0, 0, 30])),  # ! hardcoded
                 "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
                 }
-    # Initialize quadrotor dynamics
+    # Initialize quadrotor dynamics and logger and parameters
     quad_dyn = QuadDynamics()
+    quad_hist = QuadHistory()
 
     # Initialize visualization
     fig = plt.figure()
@@ -141,27 +143,19 @@ def main():
     # Step through simulation
     for t in range(100):
         ax.cla()
-        u = go_to_position(state, des_pos, quad_dyn.param_dict,
+        u, des_theta, des_vel, des_pos = go_to_position(state, des_pos, quad_dyn.param_dict,
                        integral_p_err=None, integral_v_err=None)
-        # des_vel, integral_p_err = pi_position_control(
-        #     state, des_pos, integral_p_err)
-        # des_thrust, des_theta, integral_v_err = pi_velocity_control(
-        #     state, des_vel, integral_v_err)  # attitude control
-        # des_theta_deg = np.degrees(des_theta)  # for logging
-        # u = pi_attitude_control(
-        #     state, des_theta, des_thrust, param_dict)  # attitude control
-        # Step dynamcis and update state dict
+        # Step dynamics and update state dict
         state = quad_dyn.step_dynamics(state, u)
         # update history for plotting
-        update_history(state, des_theta_deg, des_vel, des_pos)
+        quad_hist.update_history(state, np.degrees(des_theta), des_vel, des_pos)
     print("plotting")
     for t in range(100):
         # # Visualize quadrotor and angle error
         ax.cla()
-        visualize_quad(ax, hist_x[:t], hist_y[:t],
-                       hist_z[:t], hist_pos[t], hist_theta[t])
-        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
-                        hist_pos[:t+1], hist_xdot[:t+1], hist_theta[:t+1], hist_des_theta[:t+1], hist_thetadot[:t+1], dt, hist_des_xdot[:t+1], hist_des_x[:t+1])
+        visualize_quad_quadhist(ax, quad_hist, t)
+        visualize_error_quadhist(
+            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist, t, quad_dyn.param_dict["dt"])
 
 if __name__ == '__main__':
     main()
