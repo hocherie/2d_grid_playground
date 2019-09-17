@@ -16,7 +16,7 @@ Includes:
 
 """
 from dynamics import QuadDynamics, QuadHistory
-from controller import go_to_position
+from controller import go_to_position, pi_attitude_control
 from visualize_dynamics import visualize_error_quadhist, visualize_quad_quadhist
 import numpy as np
 import matplotlib.pyplot as plt
@@ -72,7 +72,7 @@ class MRAC_control:
         """
         pass
 
-    def dynamic_inversion(self):
+    def dynamic_inversion(self, state, param_dict):
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
 
         Parameters
@@ -80,13 +80,48 @@ class MRAC_control:
         self.v_tot
             total v: v_cr + v_lc - v_ad
 
-        Updates
+        state #TODO: use self.x
+            state
+
+        Returns
         -------
-        self.cmd
+        cmd
             command to actuator. For outer loop, [roll, pitch, yaw rate, thrust]
 
         """
-        pass
+        yaw = state["theta"][2]
+        
+        # specific_force = 
+        self.v_tot = np.array([0,1,0])#! mock
+        des_pitch = self.v_tot[0] * np.cos(yaw) + self.v_tot[1] * np.sin(yaw)
+        des_roll = self.v_tot[0] * np.sin(yaw) - self.v_tot[1] * np.cos(yaw)
+
+        # TODO: move to attitude controller?
+        des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
+        des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
+
+        # TODO: currently, set yaw as constant
+        des_yaw = yaw
+        des_theta = [des_roll, des_pitch, des_yaw]
+        
+
+
+        # cmd = pi_attitude_control(state, des_theta, des_thrust_pc, param_dict)
+
+        return des_theta
+
+    def plant(self, des_theta, state, quad_dyn):
+         # Thrust #TODO: assume hover thrust
+        tot_u_constant = 408750 * 4  # hover, for four motors
+        max_tot_u = 400000000.0
+        thrust_pc_constant = tot_u_constant/max_tot_u
+        des_thrust_pc = thrust_pc_constant
+
+        u = pi_attitude_control(state, des_theta, des_thrust_pc, quad_dyn.param_dict)
+        state = quad_dyn.step_dynamics(state, u)
+        return state
+
+
 
     def adaptive_element(self):
         """
@@ -115,6 +150,9 @@ class MRAC_control:
         
 
 def main():
+    # Initialize MRAC controller
+    mrac = MRAC_control()
+
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
                 "xdot": np.zeros(3,),
@@ -124,6 +162,7 @@ def main():
     # Initialize quadrotor dynamics and logger and parameters
     quad_dyn = QuadDynamics()
     quad_hist = QuadHistory()
+    
 
     # Initialize visualization
     fig = plt.figure()
@@ -143,12 +182,16 @@ def main():
     # Step through simulation
     for t in range(100):
         ax.cla()
-        u, des_theta, des_vel, des_pos = go_to_position(state, des_pos, quad_dyn.param_dict,
-                       integral_p_err=None, integral_v_err=None)
+        # u, des_theta, des_vel, des_pos = go_to_position(state, des_pos, quad_dyn.param_dict,
+        #                integral_p_err=None, integral_v_err=None)
+        des_theta = mrac.dynamic_inversion(state, quad_dyn.param_dict)
+        state = mrac.plant(des_theta, state, quad_dyn)
         # Step dynamics and update state dict
-        state = quad_dyn.step_dynamics(state, u)
+        # state = quad_dyn.step_dynamics(state, u)
         # update history for plotting
+        des_vel = [0,0,0] #! temp
         quad_hist.update_history(state, np.degrees(des_theta), des_vel, des_pos)
+
     print("plotting")
     for t in range(100):
         # # Visualize quadrotor and angle error

@@ -306,6 +306,10 @@ class QuadHistory():
         self.hist_z.append(x[2])
         self.hist_theta.append(np.degrees(state["theta"]))
         self.hist_thetadot.append(np.degrees(state["thetadot"]))
+        # if des_xdot_i is None:
+        #     des_xdot_i = [0,0,0]
+        # if des_x_i is None:
+        #     des_x_i = [0, 0, 0]
         self.hist_des_theta.append(des_theta_deg_i)
         self.hist_xdot.append(state["xdot"])
         self.hist_des_xdot.append(des_xdot_i)
