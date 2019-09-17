@@ -14,7 +14,7 @@ from controller import *
 import time
 
 # Physical constants
-g = 9.81
+g = -9.81 # FLU
 m = 0.5
 L = 0.25
 k = 3e-6
@@ -167,7 +167,7 @@ class QuadDynamics:
         a : (3, ) np.ndarray 
             linear acceleration in inertial frame (m/s^2)
         """
-        gravity = np.array([0, 0, -g])
+        gravity = np.array([0, 0, g])
         R = get_rot_matrix(theta)
         thrust = self.compute_thrust(u, k)
         T = np.dot(R, thrust)
