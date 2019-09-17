@@ -25,7 +25,7 @@ class MRAC_control:
     def __init__(self, state):
         self.state = state
         self.x_c = None # external command. input to ref model
-        self.x_r = None # states of reference model
+        self.x_r = np.hstack((self.state["x"], self.state["xdot"])) # states of reference model #TODO: check
         self.v_cr = np.zeros((3,))  # output of reference model
         self.v_h = np.zeros((3,))  # output of hedge
         self.v_ad = np.zeros((3,))  # Output of adaptive element
@@ -36,6 +36,7 @@ class MRAC_control:
 
         # Parameters
         self.lc_param = {"P": 1, "D": 1} #! handtuned
+        self.rm_param = {"P": 1, "D": 1}  # ! handtuned
 
     def ref_model(self):
         """Linear reference model. Minimizes error
@@ -57,7 +58,18 @@ class MRAC_control:
         self.v_cr
             for position control, acceleration from ref model
         """
-        pass
+        model_error = self.x_c - self.x_r
+        error_pos = model_error[0:3]  # command - reference
+        des_vel = self.rm_param["P"] * error_pos
+        self.v_cr = self.rm_param["D"] * (des_vel - self.x_r[3:])
+
+    def update_model_state(self, dt):
+        """Integrate reference states"""
+        acc_ref = self.v_cr - self.v_h # acceleration, TODO: check if subtract hedge?
+        self.x_r[3:] = self.x_r[3:] + acc_ref * dt  # vel_ref
+        self.x_r[:3] = self.x_r[:3] + self.x_r[3:] * dt  # pos_ref
+        # TODO: rotation?
+        
 
     def linear_compensator(self):
         """Stabilizes linearized dynamics. PD control to minimize model tracking error.
@@ -158,7 +170,7 @@ class MRAC_control:
 
     def update_model_track_err(self):
         "model_track_err = x_r - x"
-        self.x_r = np.array([7,3,10, 0, 0, 0]) #! mock
+        # self.x_r = np.array([7,3,10, 0, 0, 0]) #! mock
         self.model_track_error = self.x_r - np.hstack((self.state["x"], self.state["xdot"]))
         print(self.model_track_error)
 
@@ -200,16 +212,19 @@ def main():
 
     # Set desired position
     des_pos = np.array([7, 3, 10])
-    
+    mrac.x_c = np.hstack((des_pos, np.array([0,0,0])))
     # Step through simulation
     for t in range(100):
 
         # MRAC Loop
         mrac.update_model_track_err() # updates model_track_err
-        print(mrac.model_track_error)
+        mrac.ref_model() # updates self.v_cr
         mrac.linear_compensator() # updates v_lc
+
         mrac.compute_v_tot() # sums to v_tot
         des_theta = mrac.dynamic_inversion(quad_dyn.param_dict)
+
+        mrac.update_model_state(quad_dyn.param_dict["dt"]) # integrate model acc 
         mrac.plant(des_theta, quad_dyn)
 
 
