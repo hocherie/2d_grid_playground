@@ -351,7 +351,7 @@ def main():
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
         update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
-
+    print("plotting")
     for t in range(100):
         # # Visualize quadrotor and angle error
         ax.cla()
