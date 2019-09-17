@@ -26,16 +26,7 @@ maxrpm = 10000
 maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
 param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt, "maxRPM":maxrpm, "maxthrust":maxthrust}
 
-hist_theta = []
-hist_des_theta = []
-hist_thetadot = []
-hist_xdot = []
-hist_x = []
-hist_y = []
-hist_z = []
-hist_pos = []
-hist_des_xdot = []
-hist_des_x = []
+
 
 def init_state():
     """Initialize state dictionary. """
@@ -292,21 +283,34 @@ def basic_input():
     return np.power(np.array([950, 700, 700, 700]),2)
 
 
+class QuadHistory():
+    """Keeps track of quadrotor history for plotting."""
 
+    def __init__(self):
+        self.hist_theta = []
+        self.hist_des_theta = []
+        self.hist_thetadot = []
+        self.hist_xdot = []
+        self.hist_x = []
+        self.hist_y = []
+        self.hist_z = []
+        self.hist_pos = []
+        self.hist_des_xdot = []
+        self.hist_des_x = []
 
-def update_history(state, des_theta_deg_i, des_xdot_i, des_x_i):
-    """Appends current state and desired theta for plotting."""
-    x = state["x"]
-    hist_x.append(x[0])
-    hist_y.append(x[1])
-    hist_z.append(x[2])
-    hist_theta.append(np.degrees(state["theta"]))
-    hist_thetadot.append(np.degrees(state["thetadot"]))
-    hist_des_theta.append(des_theta_deg_i)
-    hist_xdot.append(state["xdot"])
-    hist_des_xdot.append(des_xdot_i)
-    hist_des_x.append(des_x_i)
-    hist_pos.append(x)
+    def update_history(self, state, des_theta_deg_i, des_xdot_i, des_x_i):
+        """Appends current state and desired theta for plotting."""
+        x = state["x"]
+        self.hist_x.append(x[0])
+        self.hist_y.append(x[1])
+        self.hist_z.append(x[2])
+        self.hist_theta.append(np.degrees(state["theta"]))
+        self.hist_thetadot.append(np.degrees(state["thetadot"]))
+        self.hist_des_theta.append(des_theta_deg_i)
+        self.hist_xdot.append(state["xdot"])
+        self.hist_des_xdot.append(des_xdot_i)
+        self.hist_des_x.append(des_x_i)
+        self.hist_pos.append(x)
 
 
 def main():
@@ -319,6 +323,9 @@ def main():
 
     # Initialize Robot State
     state = init_state()
+
+    # Initialize quadrotor history tracker
+    quad_hist = QuadHistory()
 
     # Initialize visualization
     fig = plt.figure()
@@ -350,14 +357,14 @@ def main():
             state, des_theta, des_thrust, param_dict)  # attitude control
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
-        update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
 
     for t in range(100):
         # # Visualize quadrotor and angle error
         ax.cla()
-        visualize_quad(ax, hist_x[:t], hist_y[:t], hist_z[:t], hist_pos[t], hist_theta[t])
-        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
-                        hist_pos[:t+1], hist_xdot[:t+1], hist_theta[:t+1], hist_des_theta[:t+1], hist_thetadot[:t+1], dt, hist_des_xdot[:t+1], hist_des_x[:t+1])
+        visualize_quad_quadhist(ax, quad_hist, t)
+        visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist, t, dt)
+
 
     print("Time Elapsed:", time.time() - t_start)
 if __name__ == '__main__':
