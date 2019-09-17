@@ -363,8 +363,8 @@ def main():
         # # Visualize quadrotor and angle error
         ax.cla()
         visualize_quad_quadhist(ax, quad_hist, t)
-        visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
-                        quad_hist.hist_pos[:t+1], quad_hist.hist_xdot[:t+1], quad_hist.hist_theta[:t+1], quad_hist.hist_des_theta[:t+1], quad_hist.hist_thetadot[:t+1], dt, quad_hist.hist_des_xdot[:t+1], quad_hist.hist_des_x[:t+1])
+        visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist, t, dt)
+
 
     print("Time Elapsed:", time.time() - t_start)
 if __name__ == '__main__':
