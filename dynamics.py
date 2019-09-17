@@ -362,8 +362,7 @@ def main():
     for t in range(100):
         # # Visualize quadrotor and angle error
         ax.cla()
-        visualize_quad(
-            ax, quad_hist.hist_x[:t], quad_hist.hist_y[:t], quad_hist.hist_z[:t], quad_hist.hist_pos[t], quad_hist.hist_theta[t])
+        visualize_quad_quadhist(ax, quad_hist, t)
         visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error,
                         quad_hist.hist_pos[:t+1], quad_hist.hist_xdot[:t+1], quad_hist.hist_theta[:t+1], quad_hist.hist_des_theta[:t+1], quad_hist.hist_thetadot[:t+1], dt, quad_hist.hist_des_xdot[:t+1], quad_hist.hist_des_x[:t+1])
 

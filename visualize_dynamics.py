@@ -2,6 +2,11 @@ from sim_utils import *
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
+def visualize_quad_quadhist(ax, quad_hist, t):
+    """Works with QuadHist class."""
+    visualize_quad(ax, quad_hist.hist_x[:t], quad_hist.hist_y[:t],
+                   quad_hist.hist_z[:t], quad_hist.hist_pos[t], quad_hist.hist_theta[t])
+
 
 def animate_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     """Plot quadrotor 3D position and history"""
