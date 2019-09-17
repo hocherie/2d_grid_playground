@@ -7,7 +7,7 @@ import random
 from safe_control import *
 
 
-def main():
+def head_to_wall():
     # Instantiate Map
     src_path_map = "data/blank_hallway.dat"
     map1 = Map(src_path_map)
@@ -44,7 +44,7 @@ def main():
             print("roll, pitch", np.degrees(roll), np.degrees(pitch))
             roll = np.clip(roll, np.radians(-30), np.radians(30))
             pitch = np.clip(pitch, np.radians(-30), np.radians(30))
-            aggr_robbie.update(safe_theta=[roll, pitch, 0], safe_kp=55)
+            aggr_robbie.update(safe_theta=[roll, pitch, 0], safe_kp=50)
         else:
             aggr_robbie.update()         
 
@@ -69,28 +69,28 @@ def main():
     plt.legend()
     plt.show()
 
-# def main():
-#     print("start!!")
+def main():
+    print("start!!")
 
-#     # load map
-#     src_path_map = "data/two_obs.dat"
-#     map1 = Map(src_path_map)
+    # load map
+    src_path_map = "data/two_obs.dat"
+    map1 = Map(src_path_map)
 
-#     # lidar = LidarSimulator(map1)
+    # lidar = LidarSimulator(map1)
 
-#     # initialize robot (initializes lidar with map) 
-#     robbie = Robot(map1)
+    # initialize robot (initializes lidar with map) 
+    robbie = Robot(map1, x=[60, 10, 10])
 
-#     for i in range(100):
-#         print("Time " + str(i))
-#         plt.cla()
+    for i in range(100):
+        print("Time " + str(i))
+        plt.cla()
         
-#         robbie.update()
-#         map1.visualize_map()
-#         robbie.visualize()
-#         plt.pause(0.1)
+        robbie.update()
+        map1.visualize_map()
+        robbie.visualize()
+        plt.pause(0.1)
         
-#     print("done!!")
+    print("done!!")
 
 if __name__ == '__main__':
     main()

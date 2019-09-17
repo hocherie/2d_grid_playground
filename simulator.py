@@ -19,8 +19,8 @@ DISPSCALE = 5
 DANGER_RANGE = 5
 
 class Robot():
-    def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
-        self.state = {"x": np.array([60, 60, 10]),
+    def __init__(self, map1, x=[60,60,10], lidar=None, pos_cont=None, use_safe=True):
+        self.state = {"x": np.array(x),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                       # ! hardcoded
