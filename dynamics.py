@@ -32,7 +32,7 @@ def init_state():
     """Initialize state dictionary. """
     state = {"x": np.array([5, 0, 10]) , 
                 "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 30])),  # ! hardcoded
+                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                 "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
                 }
     return state
@@ -290,7 +290,8 @@ class QuadHistory():
         self.hist_theta = []
         self.hist_des_theta = []
         self.hist_thetadot = []
-        self.hist_xdot = []
+        self.hist_xdot = [[0,0,0]]
+        self.hist_xdotdot = []
         self.hist_x = []
         self.hist_y = []
         self.hist_z = []
@@ -298,9 +299,11 @@ class QuadHistory():
         self.hist_des_xdot = []
         self.hist_des_x = []
 
-    def update_history(self, state, des_theta_deg_i, des_xdot_i, des_x_i):
+    def update_history(self, state, des_theta_deg_i, des_xdot_i, des_x_i, dt):
         """Appends current state and desired theta for plotting."""
         x = state["x"]
+        xdot = state["xdot"]
+        xdotdot = (xdot - np.array(self.hist_xdot[-1])) / dt
         self.hist_x.append(x[0])
         self.hist_y.append(x[1])
         self.hist_z.append(x[2])
@@ -311,6 +314,8 @@ class QuadHistory():
         self.hist_des_xdot.append(des_xdot_i)
         self.hist_des_x.append(des_x_i)
         self.hist_pos.append(x)
+        
+        self.hist_xdotdot.append(xdotdot)
 
 
 def main():
@@ -332,8 +337,9 @@ def main():
     ax = fig.add_subplot(2, 3, 1, projection='3d')
     ax_x_error = fig.add_subplot(2, 3, 2)
     ax_xd_error = fig.add_subplot(2,3,3)
-    ax_th_error = fig.add_subplot(2, 3, 4)
-    ax_thr_error = fig.add_subplot(2, 3, 5)
+    ax_xdd_error = fig.add_subplot(2, 3, 4)
+    ax_th_error = fig.add_subplot(2, 3, 5)
+    ax_thr_error = fig.add_subplot(2, 3, 6)
     
 
 
@@ -357,13 +363,13 @@ def main():
             state, des_theta, des_thrust, param_dict)  # attitude control
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
-        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos)  # update history for plotting
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, dt)  # update history for plotting
 
     for t in range(100):
         # # Visualize quadrotor and angle error
         ax.cla()
         visualize_quad_quadhist(ax, quad_hist, t)
-        visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist, t, dt)
+        visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, dt)
 
 
     print("Time Elapsed:", time.time() - t_start)
