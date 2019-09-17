@@ -93,7 +93,7 @@ class MRAC_control:
         
         # specific_force = 
         self.v_tot = np.array([0,1,0])#! mock
-        des_pitch = self.v_tot[0] * np.cos(yaw) + self.v_tot[1] * np.sin(yaw)
+        des_pitch = self.v_tot[0] * np.cos(yaw) + self.v_tot[1] * np.sin(yaw) # TODO: need to incorporate specific force?
         des_roll = self.v_tot[0] * np.sin(yaw) - self.v_tot[1] * np.cos(yaw)
 
         # TODO: move to attitude controller?
