@@ -22,7 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class MRAC_control:
-    def __init__(self):
+    def __init__(self, state):
+        self.state = state
         self.x_c = None # external command. input to ref model
         self.x_r = None # states of reference model
         self.v_cr = np.zeros((3,))  # output of reference model
@@ -32,6 +33,9 @@ class MRAC_control:
         self.v_tot = np.zeros((3,))
         self.model_track_err  = None  
         self.cmd = None # Final output to actuator
+
+        # Parameters
+        self.lc_param = {"P": 1, "D": 0}
         # self.x = None # current state
 
     def ref_model(self):
@@ -56,7 +60,7 @@ class MRAC_control:
         """
         pass
 
-    def linear_compensator(self, state):
+    def linear_compensator(self):
         """Stabilizes linearized dynamics. PD control to minimize model tracking error.
 
         Parameters
@@ -75,18 +79,18 @@ class MRAC_control:
             output from linear compensator
 
         """
-        lc_param = {"P": 1, "D": 0}  # TODO: move to object init?
+          # TODO: move to object init?
         self.model_track_error = np.array([1,0,0, 0,0,0]) #! mock. position x 3, velocity x 3
 
         error_pos = self.model_track_error[0:3] # reference - state
         error_vel = self.model_track_error[3:]
 
         print(error_pos)
-        self.v_lc = lc_param["P"] * error_pos + lc_param["D"] * error_vel
+        self.v_lc = self.lc_param["P"] * error_pos + self.lc_param["D"] * error_vel
         
         
 
-    def dynamic_inversion(self, state, param_dict):
+    def dynamic_inversion(self, param_dict):
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
         Similar to control allocator.
 
@@ -105,7 +109,7 @@ class MRAC_control:
             desired roll, pitch, yaw angle (rad) to attitude controller
 
         """
-        yaw = state["theta"][2]
+        yaw = self.state["theta"][2]
         # tot_u_constant = 408750 * 4  # hover, for four motors
         # specific_force = tot_u_constant  / param_dict["m"] 
 
@@ -127,16 +131,16 @@ class MRAC_control:
         
         return des_theta
 
-    def plant(self, des_theta, state, quad_dyn):
+    def plant(self, des_theta, quad_dyn):
          # Thrust #TODO: assume hover thrust
         tot_u_constant = 408750 * 4  # hover, for four motors
         max_tot_u = 400000000.0
         thrust_pc_constant = tot_u_constant/max_tot_u
         des_thrust_pc = thrust_pc_constant
 
-        u = pi_attitude_control(state, des_theta, des_thrust_pc, quad_dyn.param_dict)
-        state = quad_dyn.step_dynamics(state, u)
-        return state
+        u = pi_attitude_control(self.state, des_theta, des_thrust_pc, quad_dyn.param_dict)
+        self.state = quad_dyn.step_dynamics(self.state, u)
+        # return state
 
 
 
@@ -168,15 +172,17 @@ class MRAC_control:
         
 
 def main():
-    # Initialize MRAC controller
-    mrac = MRAC_control()
-
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
-                "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
-                "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
-                }
+             "xdot": np.zeros(3,),
+             "theta": np.radians(np.array([0, 0, 25])),  # ! hardcoded
+             "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
+             }
+             
+    # Initialize MRAC controller
+    mrac = MRAC_control(state)
+
+
     # Initialize quadrotor dynamics and logger and parameters
     quad_dyn = QuadDynamics()
     quad_hist = QuadHistory()
@@ -202,17 +208,17 @@ def main():
     for t in range(100):
 
         # MRAC Loop
-        mrac.linear_compensator(state) # updates v_lc
+        mrac.linear_compensator() # updates v_lc
         mrac.compute_v_tot() # sums to v_tot
-        des_theta = mrac.dynamic_inversion(state, quad_dyn.param_dict)
-        state = mrac.plant(des_theta, state, quad_dyn)
+        des_theta = mrac.dynamic_inversion(quad_dyn.param_dict)
+        mrac.plant(des_theta, quad_dyn)
 
 
         # update history for plotting
         ax.cla()
         des_vel = [0,0,0] #! temp
         # update history for plotting
-        quad_hist.update_history(state, np.degrees(
+        quad_hist.update_history(mrac.state, np.degrees(
             des_theta), des_vel, des_pos, quad_dyn.param_dict["dt"])
 
     print("plotting")
