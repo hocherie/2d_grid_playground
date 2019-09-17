@@ -87,8 +87,8 @@ class MRAC_control:
 
         Returns
         -------
-        cmd
-            command to actuator. For outer loop, [roll, pitch, yaw rate, thrust]
+        desired_theta: np.ndarray(3,)
+            desired roll, pitch, yaw angle (rad) to attitude controller
 
         """
         yaw = state["theta"][2]
@@ -112,8 +112,6 @@ class MRAC_control:
         des_yaw = yaw
         des_theta = [des_roll, des_pitch, des_yaw]
         
-
-
         return des_theta
 
     def plant(self, des_theta, state, quad_dyn):
