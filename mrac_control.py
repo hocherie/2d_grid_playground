@@ -25,14 +25,14 @@ class MRAC_control:
     def __init__(self):
         self.x_c = None # external command. input to ref model
         self.x_r = None # states of reference model
-        self.v_cr = None # output of reference model
-        self.v_h = None # output of hedge
-        self.v_ad = None # Output of adaptive element
-        self.v_lc = None # Output of linear compensator
-        self.v_tot = None
+        self.v_cr = np.zeros((3,))  # output of reference model
+        self.v_h = np.zeros((3,))  # output of hedge
+        self.v_ad = np.zeros((3,))  # Output of adaptive element
+        self.v_lc = np.zeros((3,)) # Output of linear compensator
+        self.v_tot = np.zeros((3,))
         self.model_track_err  = None  
         self.cmd = None # Final output to actuator
-        self.x = None # current state
+        # self.x = None # current state
 
     def ref_model(self):
         """Linear reference model. Minimizes error
@@ -56,21 +56,35 @@ class MRAC_control:
         """
         pass
 
-    def linear_compensator(self):
+    def linear_compensator(self, state):
         """Stabilizes linearized dynamics. PD control to minimize model tracking error.
 
         Parameters
         ----------
         self.model_track_err
             error between reference model and state
+
+        Uses
+        ----
+        lc_param
+            gains for linear compensator
         
-        Updates
+        Returns
         -------
-        self.v_lc
+        v_lc
             output from linear compensator
 
         """
-        pass
+        lc_param = {"P": 1, "D": 0}  # TODO: move to object init?
+        self.model_track_error = np.array([1,0,0, 0,0,0]) #! mock. position x 3, velocity x 3
+
+        error_pos = self.model_track_error[0:3] # reference - state
+        error_vel = self.model_track_error[3:]
+
+        print(error_pos)
+        self.v_lc = lc_param["P"] * error_pos + lc_param["D"] * error_vel
+        
+        
 
     def dynamic_inversion(self, state, param_dict):
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
@@ -94,7 +108,6 @@ class MRAC_control:
         yaw = state["theta"][2]
         # tot_u_constant = 408750 * 4  # hover, for four motors
         # specific_force = tot_u_constant  / param_dict["m"] 
-        self.v_tot = np.array([1,0,0]) #! mock
 
         # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf (Eq. 22-24)
         U1 = np.linalg.norm(self.v_tot - np.array([0, 0, param_dict["g"]]))
@@ -150,7 +163,8 @@ class MRAC_control:
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
-        pass
+
+        self.v_tot = self.v_cr + self.v_lc - self.v_ad
         
 
 def main():
@@ -186,14 +200,16 @@ def main():
     
     # Step through simulation
     for t in range(100):
-        ax.cla()
-        # u, des_theta, des_vel, des_pos = go_to_position(state, des_pos, quad_dyn.param_dict,
-        #                integral_p_err=None, integral_v_err=None)
+
+        # MRAC Loop
+        mrac.linear_compensator(state) # updates v_lc
+        mrac.compute_v_tot() # sums to v_tot
         des_theta = mrac.dynamic_inversion(state, quad_dyn.param_dict)
         state = mrac.plant(des_theta, state, quad_dyn)
-        # Step dynamics and update state dict
-        # state = quad_dyn.step_dynamics(state, u)
+
+
         # update history for plotting
+        ax.cla()
         des_vel = [0,0,0] #! temp
         # update history for plotting
         quad_hist.update_history(state, np.degrees(
