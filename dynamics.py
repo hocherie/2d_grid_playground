@@ -14,7 +14,7 @@ from controller import *
 import time
 
 # Physical constants
-g = 9.81
+g = 9.81 # TODO: make g negative
 m = 0.5
 L = 0.25
 k = 3e-6

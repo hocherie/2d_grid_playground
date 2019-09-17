@@ -76,6 +76,7 @@ class MRAC_control:
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
         Similar to control allocator.
 
+        TODO: do mapping?
         Parameters
         ----------
         self.v_tot
@@ -95,15 +96,13 @@ class MRAC_control:
         # specific_force = tot_u_constant  / param_dict["m"] 
         self.v_tot = np.array([1,0,0]) #! mock
 
-        # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf
-        U1 = np.linalg.norm(self.v_tot + np.array([0, 0, param_dict["g"]]))
+        # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf (Eq. 22-24)
+        U1 = np.linalg.norm(self.v_tot - np.array([0, 0, param_dict["g"]]))
         des_pitch_noyaw =  np.arcsin(self.v_tot[0] / U1)
         des_angle = [des_pitch_noyaw,
                      np.arcsin(self.v_tot[1] / (U1 * np.cos(des_pitch_noyaw)))]
         des_pitch = des_angle[0] * np.cos(yaw) + des_angle[1] * np.sin(yaw)
         des_roll = des_angle[0] * np.sin(yaw) - des_angle[1] * np.cos(yaw)
-        # des_pitch = angle_tot[0] * np.cos(yaw) + angle_tot[1] * np.sin(yaw)
-        # des_roll = angle_tot[0] * np.sin(yaw) - angle_tot[1] * np.cos(yaw)
 
         # TODO: move to attitude controller?
         des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
@@ -114,8 +113,6 @@ class MRAC_control:
         des_theta = [des_roll, des_pitch, des_yaw]
         
 
-
-        # cmd = pi_attitude_control(state, des_theta, des_thrust_pc, param_dict)
 
         return des_theta
 
