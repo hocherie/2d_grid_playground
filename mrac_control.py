@@ -175,8 +175,9 @@ def main():
     ax = fig.add_subplot(2, 3, 1, projection='3d')
     ax_x_error = fig.add_subplot(2, 3, 2)
     ax_xd_error = fig.add_subplot(2, 3, 3)
-    ax_th_error = fig.add_subplot(2, 3, 4)
-    ax_thr_error = fig.add_subplot(2, 3, 5)
+    ax_xdd_error = fig.add_subplot(2, 3, 4)
+    ax_th_error = fig.add_subplot(2, 3, 5)
+    ax_thr_error = fig.add_subplot(2, 3, 6)
 
     # Initialize controller errors # TODO: move to objects
     integral_p_err = None
@@ -196,7 +197,9 @@ def main():
         # state = quad_dyn.step_dynamics(state, u)
         # update history for plotting
         des_vel = [0,0,0] #! temp
-        quad_hist.update_history(state, np.degrees(des_theta), des_vel, des_pos)
+        # update history for plotting
+        quad_hist.update_history(state, np.degrees(
+            des_theta), des_vel, des_pos, quad_dyn.param_dict["dt"])
 
     print("plotting")
     for t in range(100):
@@ -204,7 +207,7 @@ def main():
         ax.cla()
         visualize_quad_quadhist(ax, quad_hist, t)
         visualize_error_quadhist(
-            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, quad_hist, t, quad_dyn.param_dict["dt"])
+            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"])
 
 if __name__ == '__main__':
     main()
