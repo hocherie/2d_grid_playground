@@ -36,6 +36,8 @@ class MRAC_control:
 
         # Parameters
         self.lc_param = {"P": 1, "D": 1} #! handtuned
+        self.Rp = np.diag(np.tile([self.lc_param["P"]], (3,))) #! hardcoded
+        self.Rd = np.diag(np.tile([self.lc_param["D"]], (3,))) #! hardcoded
         self.rm_param = {"P": 1, "D": 1}  # ! handtuned
 
     def ref_model(self):
@@ -249,43 +251,108 @@ def main():
 
 class AdaptNet():
     def __init__(self):
-        self.n_in = 0
-        self.n_hid = 0
-        self.n_out = 0
+        self.n_in = 6
+        self.n_hid = 10
+        self.n_out = 3
 
         # Initialize weights
-        self.V = np.zeros(self.n_in, self.n_hid)
-        self.W = np.zeros(self.n_hid, self.n_out)
+        self.V = np.zeros((self.n_in, self.n_hid))
+        self.W = np.zeros((self.n_hid, self.n_out)) # TODO: what's good weight init
 
     def forward(self, X):
         # input to hidden
-        z1 = self.V @ X
+        z1 = self.V.T @ X # TODO: should it be transposed?
         z2 = self.sigmoid(z1)
         # TODO: include bias?
 
         # hidden to output
-        out = self.W @ z2
+        out = self.W.T @ z2
         return out
 
-    def compute_wgrad(self, X):
-        # tracking error (pos, vel, )
-        # -gamma_w(sigma - sigma'V^TX)r^T + k abs(e) W
+    def compute_wgrad(self, X, Rp, Rd, track_error):
+        """-gamma_w(sigma - sigma'V^TX)r^T + k abs(e) W"""
+        # tracking error (pos_x, _y, _z, vel_x, _y, _z) pg.4
+        # track_error = np.array([0,0,0,0,0,0]) #! mock
+        # derivative of e = Ae + B[v_ad - disturbance]
+        # A = np.array([[np.zeros((3,3)), np.eye(3)],
+        #             [-Rp, -Rd]])
+        B = np.array([np.zeros((3,3))], [np.eye(3)])
+
+
+        # compute necessary components
+        P1 = np.array([Rp.T @ Rp + 0.5 * Rp @ Rd.T @ Rd,    0.5 @ Rp @ Rd],
+                        [0.5 @ Rp @ Rd,                   Rp])
+        P = (1/(0.25*self.n_hid) + b_w.T @ b_w) # TODO: b_w
+        r = (track_error.T @ P @ B).T # TODO: move to common
+
+        # Final compute
         # TODO: is X hat different?
         sig_vt_x = self.sigmoid(self.V.T @ X)
         sigp_vt_x = self.sigmoid_prime(self.V.T @ X) # TODO: check sigmoid prime
 
-        first_inner = (sig_vt_x - sigp_vt_x @ (V.T @ X)) @ r.T 
+        first_inner = (sig_vt_x - sigp_vt_x @ (self.V.T @ X)) @ self.r.T 
 
-        second_inner = k * np.norm(e) * W
+        second_inner = k * np.linalg.norm(track_error) * self.W
+        w_grad = -self.gam_w @ (first_inner + second_inner)
 
         # TODO: add robustifying term
-        return -gam_w @ (first_inner + second_inner)
+        return w_grad
+
+    def compute_vgrad(self, X, Rp, Rd, track_error):
+        """-gamma_v[x_in (r.T w.T sigma) + k * norm(track_error) * w]"""
+        # TODO: is x_in different from state?
+        # Compute necessary components
+        P1 = np.zeros((6,6))
+        P1[:3, :3] = Rp.T @ Rp + 0.5 * Rp @ Rd.T @ Rd # upper left
+        P1[:3, 3:] = 0.5 * Rp @ Rd # upper right
+        P1[3:, :3] = 0.5 * Rp @ Rd # lower left
+        P1[3:, 3:] = Rp # lower right
+        
+        P = (1/(0.25*self.n_hid) + b_w.T @ b_w) * P1 # TODO: b_w
+        r = (track_error.T @ P @ B).T # TODO: move to common
+
+        # Final compute (eq. 52)
+        first_inner = X @ (r.T @ self.W.T @ self.sigmoid_prime(self.V.T @ X))
+        second_inner = k * np.linalg.norm(track_error) * self.V #TODO: @ or *
+        v_grad = -self.gam_v * (first_inner + second_inner)
+
+        return v_grad
+
+    def updateWeights(self, X, Rp, Rd, track_error):
+        v_grad = self.compute_vgrad(X, Rp, Rd, track_error)
+        w_grad = self.compute_wgrad(X, Rp, Rd, track_error)
+
+        self.W = self.W - self.l_w @ w_grad # TODO: check sign
+        self.V = self.V - self.l_v @ v_grad
         
     
     def sigmoid(self, s):
         return 1/(1+np.exp(-s))
 
     def sigmoid_prime(self, s):
-        return sigmoid(s) * (1-sigmoid(s))
+        return self.sigmoid(s) * (1-self.sigmoid(s))
+
+def test_net():
+    state = {"x": np.array([5, 0, 10]),
+             "xdot": np.zeros(3,),
+             "theta": np.radians(np.array([0, 0, -25])),  
+             "thetadot": np.radians(np.array([0, 0, 0]))  
+             }
+    net = AdaptNet()
+    mrac = MRAC_control(state)
+
+    X = np.array([1,0,0,0,0,0]).T #! Mock
+    ## NN iteration
+
+    # Forward Pass (compute output with W and V)
+    acc_ad_b = net.forward(X)
+    print(acc_ad_b)
+
+    # Back prop (update W, V)
+    track_error = np.array([0.1, 0,0,0,0,0])
+    net.updateWeights(X, mrac.Rp, mrac.Rd, track_error)
+
+
 if __name__ == '__main__':
-    main()
+    test_net()
+
