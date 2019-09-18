@@ -255,18 +255,26 @@ class AdaptNet():
         self.n_hid = 10
         self.n_out = 3
 
-        # Initialize weights
+        # Initialize weights (W,V)
         self.V = np.zeros((self.n_in, self.n_hid))
         self.W = np.zeros((self.n_hid, self.n_out)) # TODO: what's good weight init
 
+        # Initialize bias constants
+        self.bw = 0 #! mock
+        self.bv = 0 #! mock 
+
+        # Initialize bias weights (theta_w, theta_v)
+        self.theta_v = np.zeros((self.n_hid, ))
+        self.theta_w = np.zeros((self.n_out, ))
+
     def forward(self, X):
         # input to hidden
-        z1 = self.V.T @ X # TODO: should it be transposed?
-        z2 = self.sigmoid(z1)
+        z1 = self.V.T @ X + self.bv * self.theta_v  # 10x 1 # TODO: should it be transposed?
+        z2 = self.sigmoid(z1) # 10 x 1
         # TODO: include bias?
 
         # hidden to output
-        out = self.W.T @ z2
+        out = self.W.T @ z2 + self.bw * self.theta_w 
         return out
 
     def compute_wgrad(self, X, Rp, Rd, track_error):
@@ -307,7 +315,7 @@ class AdaptNet():
         P1[:3, 3:] = 0.5 * Rp @ Rd # upper right
         P1[3:, :3] = 0.5 * Rp @ Rd # lower left
         P1[3:, 3:] = Rp # lower right
-        
+
         P = (1/(0.25*self.n_hid) + b_w.T @ b_w) * P1 # TODO: b_w
         r = (track_error.T @ P @ B).T # TODO: move to common
 
@@ -330,7 +338,7 @@ class AdaptNet():
         return 1/(1+np.exp(-s))
 
     def sigmoid_prime(self, s):
-        return self.sigmoid(s) * (1-self.sigmoid(s))
+        return np.multiply(self.sigmoid(s),  (1-self.sigmoid(s))) # TODO: check if element-wise
 
 def test_net():
     state = {"x": np.array([5, 0, 10]),
