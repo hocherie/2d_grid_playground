@@ -246,5 +246,46 @@ def main():
     visualize_error_quadhist(
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"])
     plt.show()
+
+class AdaptNet():
+    def __init__(self):
+        self.n_in = 0
+        self.n_hid = 0
+        self.n_out = 0
+
+        # Initialize weights
+        self.V = np.zeros(self.n_in, self.n_hid)
+        self.W = np.zeros(self.n_hid, self.n_out)
+
+    def forward(self, X):
+        # input to hidden
+        z1 = self.V @ X
+        z2 = self.sigmoid(z1)
+        # TODO: include bias?
+
+        # hidden to output
+        out = self.W @ z2
+        return out
+
+    def compute_wgrad(self, X):
+        # tracking error (pos, vel, )
+        # -gamma_w(sigma - sigma'V^TX)r^T + k abs(e) W
+        # TODO: is X hat different?
+        sig_vt_x = self.sigmoid(self.V.T @ X)
+        sigp_vt_x = self.sigmoid_prime(self.V.T @ X) # TODO: check sigmoid prime
+
+        first_inner = (sig_vt_x - sigp_vt_x @ (V.T @ X)) @ r.T 
+
+        second_inner = k * np.norm(e) * W
+
+        # TODO: add robustifying term
+        return -gam_w @ (first_inner + second_inner)
+        
+    
+    def sigmoid(self, s):
+        return 1/(1+np.exp(-s))
+
+    def sigmoid_prime(self, s):
+        return sigmoid(s) * (1-sigmoid(s))
 if __name__ == '__main__':
     main()
