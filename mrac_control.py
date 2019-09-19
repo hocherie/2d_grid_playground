@@ -270,8 +270,10 @@ class AdaptNet():
 
         # Initialize learning parameters
         self.k_track = 0.01 #  taken from Basti's code
-        self.l_w = 0 #! mock
-        self.l_v = 0 #! mock
+        # self.l_w = 0 #! mock
+        # self.l_v = 0 #! mock
+        self.gam_v = 0.01  # taken from Basti's
+        self.gam_w = 0.1 #  taken from Basti's 
 
     def forward(self, X):
         X_bar = np.vstack((self.bw, X))
@@ -302,7 +304,7 @@ class AdaptNet():
         P1[:3, 3:] = 0.5 * Rp @ Rd # upper right
         P1[3:, :3] = 0.5 * Rp @ Rd # lower left
         P1[3:, 3:] = Rp # lower right
-        P = (1/(0.25*self.n_hid) + np.power(self.bw,2)) # TODO: b_w
+        P = (1/(0.25*self.n_hid) + np.power(self.bw,2)) * P1 # TODO: b_w
         r = (track_error.T @ P @ B).T # TODO: move to common
 
         # Final compute
@@ -347,8 +349,9 @@ class AdaptNet():
         v_grad = self.compute_vgrad(X_in, Rp, Rd, track_error)
         w_grad = self.compute_wgrad(X_in, Rp, Rd, track_error)
 
-        self.W = self.W - self.l_w @ w_grad # TODO: check sign
-        self.V = self.V - self.l_v @ v_grad # TODO: is gamma learning rate?
+        self.W = self.W - self.gam_w @ w_grad # TODO: check sign
+        self.V = self.V - self.gam_v @ v_grad  # TODO: is gamma learning rate?
+        print("weight updated")
         
     
     def sigmoid_orig(self, s):
