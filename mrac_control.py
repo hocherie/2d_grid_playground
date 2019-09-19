@@ -274,6 +274,7 @@ class AdaptNet():
         # self.l_v = 0 #! mock
         self.gam_v = 0.01  # taken from Basti's
         self.gam_w = 0.1 #  taken from Basti's 
+        self.k = 0.0001 # taken from Basti's
 
     def forward(self, X):
         X_bar = np.vstack((self.bw, X))
@@ -311,11 +312,11 @@ class AdaptNet():
         # TODO: is X hat different?
         sig_vt_x = self.sigmoid_bw(self.V.T @ X_bar)
         sigp_vt_x = self.sigmoid_p_bw(self.V.T @ X_bar) # TODO: check sigmoid prime
-
+        assert(sigp_vt_x.shape == (11,10))
         first_inner = (sig_vt_x - sigp_vt_x @ (self.V.T @ X_bar)) @ r.T 
 
-        second_inner = k * np.linalg.norm(track_error) * self.W
-        w_grad = -self.gam_w @ (first_inner + second_inner)
+        second_inner = self.k * np.linalg.norm(track_error) * self.W
+        w_grad = -self.gam_w * (first_inner + second_inner)
 
         # TODO: add robustifying term
         return w_grad
@@ -349,8 +350,8 @@ class AdaptNet():
         v_grad = self.compute_vgrad(X_in, Rp, Rd, track_error)
         w_grad = self.compute_wgrad(X_in, Rp, Rd, track_error)
 
-        self.W = self.W - self.gam_w @ w_grad # TODO: check sign
-        self.V = self.V - self.gam_v @ v_grad  # TODO: is gamma learning rate?
+        self.W = self.W + self.gam_w * w_grad # TODO: check sign
+        self.V = self.V + self.gam_v * v_grad  # TODO: is gamma learning rate?
         print("weight updated")
         
     
@@ -367,7 +368,7 @@ class AdaptNet():
     def sigmoid_p_bw(self, s):
         """Add bw as first element"""
 
-        return np.vstack((self.bw, self.sigmoid_prime(s))) # TODO: check
+        return np.vstack((np.zeros((1,self.n_hid)), np.diag(np.ndarray.flatten(self.sigmoid_prime(s))))) # TODO: check
 
 def test_net():
     state = {"x": np.array([5, 0, 10]),
