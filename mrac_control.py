@@ -40,6 +40,10 @@ class MRAC_control:
         self.Rd = np.diag(np.tile([self.lc_param["D"]], (3,))) #! hardcoded
         self.rm_param = {"P": 1, "D": 1}  # ! handtuned
 
+        # History
+        self.m_x_hist = []
+        self.m_xd_hist = []
+
     def ref_model(self):
         """Linear reference model. Minimizes error
         between command and reference state.
@@ -60,6 +64,11 @@ class MRAC_control:
         self.v_cr
             for position control, acceleration from ref model
         """
+        self.m_x_hist.append(np.copy(self.x_r[:3]))
+        # self.m_x_hist.append([1,2,3])
+        # print(self.x_r[:3])
+        # print("Model", self.m_x_hist)
+        self.m_xd_hist.append(np.copy(self.x_r[3:]))
         model_error = self.x_c - self.x_r
         error_pos = model_error[0:3]  # command - reference
         des_vel = self.rm_param["P"] * error_pos
@@ -174,7 +183,7 @@ class MRAC_control:
         "model_track_err = x_r - x"
         # self.x_r = np.array([7,3,10, 0, 0, 0]) #! mock
         self.model_track_error = self.x_r - np.hstack((self.state["x"], self.state["xdot"]))
-        print(self.model_track_error)
+        # print(self.model_track_error)
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
@@ -217,7 +226,8 @@ def main():
     for t in range(100):
 
         # Set desired position
-        des_pos = np.array([5 + np.sin(0.1*t), 0.01*t, 10])
+        # des_pos = np.array([5 + np.sin(0.1*t), 0.01*t, 10])
+        des_pos = np.array([10, 0, 10])
         mrac.x_c = np.hstack((des_pos, np.array([0, 0, 0])))
 
         # MRAC Loop
@@ -246,7 +256,7 @@ def main():
     ax.cla()
     visualize_quad_quadhist(ax, quad_hist, t)
     visualize_error_quadhist(
-        ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"])
+        ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"], mrac.m_x_hist, mrac.m_xd_hist)
     plt.show()
 
 class AdaptNet():
@@ -270,8 +280,6 @@ class AdaptNet():
 
         # Initialize learning parameters
         self.k_track = 0.01 #  taken from Basti's code
-        # self.l_w = 0 #! mock
-        # self.l_v = 0 #! mock
         self.gam_v = 0.01  # taken from Basti's
         self.gam_w = 0.1 #  taken from Basti's 
         self.k = 0.0001 # taken from Basti's
@@ -385,7 +393,7 @@ def test_net():
 
     # Forward Pass (compute output with W and V)
     acc_ad_b = net.forward(X)
-    print(acc_ad_b)
+    # print(acc_ad_b)
 
     # Back prop (update W, V)
     track_error = np.array([[0.1, 0,0,0,0,0]]).T
@@ -394,5 +402,6 @@ def test_net():
 
 
 if __name__ == '__main__':
-    test_net()
+    # test_net()
+    main()
 

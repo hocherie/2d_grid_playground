@@ -8,11 +8,11 @@ def visualize_quad_quadhist(ax, quad_hist, t):
                    quad_hist.hist_z[:t], quad_hist.hist_pos[t], quad_hist.hist_theta[t])
 
 
-def visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist,t, dt):
+def visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist,t, dt, model_x, model_xd):
     """Works with QuadHist class."""
     visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error,
                     quad_hist.hist_pos[:t+1], quad_hist.hist_xdot[:t+1], quad_hist.hist_theta[:t+1], quad_hist.hist_des_theta[:t+1], quad_hist.hist_thetadot[:t+1], dt, quad_hist.hist_des_xdot[:t+1], quad_hist.hist_des_x[:t+1],
-                    quad_hist.hist_xdotdot[:t+1])
+                    quad_hist.hist_xdotdot[:t+1], model_x, model_xd)
 
 def animate_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     """Plot quadrotor 3D position and history"""
@@ -77,7 +77,7 @@ def visualize_quad(ax, hist_x, hist_y, hist_z, cur_state, cur_theta):
     plt.pause(0.1)
 
 
-def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x, hist_xdotdot):
+def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, hist_pos, hist_xdot, hist_theta, hist_des_theta, hist_thetadot, dt, hist_des_xdot, hist_des_x, hist_xdotdot, model_x, model_xd):
     # pass
     # ax.plot([0,1], [1,10],'b')
 
@@ -97,6 +97,16 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_e
                     dt, np.array(hist_des_x)[:, 2], 'r--')
     ax_x_error.set_title("Position (world)")
     ax_x_error.legend(["x", "y", "z"])
+    
+    # Model Pos
+    if model_x:
+        ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_x)[:, 0], 'k-*')
+        print(model_x)
+        ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_x)[:, 1], 'b-*')
+        ax_x_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_x)[:, 2], 'r-*')
 
     # TODO: make into funciton for each plot
     # Velocity Error
@@ -115,6 +125,15 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_e
                      dt, np.array(hist_des_xdot)[:, 2], 'r--')
     ax_xd_error.legend(["x", "y", "z"])
     ax_xd_error.set_title("Velocity (world)")
+    # Model Vel
+    if model_xd:
+        ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_xd)[:, 0], 'k-*')
+        # print(model_x)
+        ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_xd)[:, 1], 'b-*')
+        ax_xd_error.plot(np.array(range(len(hist_theta))) *
+                    dt, np.array(model_xd)[:, 2], 'r-*')
 
     # Angle Error
     ax_th_error.plot(np.array(range(len(hist_theta))) *
