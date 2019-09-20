@@ -89,24 +89,25 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_e
     ax_x_error.plot(np.array(range(len(hist_theta))) *
                     dt, np.array(hist_pos)[:, 2], 'r')
     # Desired Pos
-    ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(hist_des_x)[:, 0], 'k--')
-    ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(hist_des_x)[:, 1], 'b--')
-    ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(hist_des_x)[:, 2], 'r--')
+    # ax_x_error.plot(np.array(range(len(hist_theta))) *
+    #                 dt, np.array(hist_des_x)[:, 0], 'k--')
+    # ax_x_error.plot(np.array(range(len(hist_theta))) *
+    #                 dt, np.array(hist_des_x)[:, 1], 'b--')
+    # ax_x_error.plot(np.array(range(len(hist_theta))) *
+    #                 dt, np.array(hist_des_x)[:, 2], 'r--')
+
     ax_x_error.set_title("Position (world)")
     ax_x_error.legend(["x", "y", "z"])
     
     # Model Pos
     if model_x:
         ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_x)[:, 0], 'k-*')
-        print(model_x)
+                    dt, np.array(model_x)[:, 0], 'k:')
+        # print(model_x)
         ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_x)[:, 1], 'b-*')
+                    dt, np.array(model_x)[:, 1], 'b:')
         ax_x_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_x)[:, 2], 'r-*')
+                    dt, np.array(model_x)[:, 2], 'r:')
 
     # TODO: make into funciton for each plot
     # Velocity Error
@@ -128,12 +129,12 @@ def visualize_error(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_e
     # Model Vel
     if model_xd:
         ax_xd_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_xd)[:, 0], 'k-*')
+                    dt, np.array(model_xd)[:, 0], 'k:')
         # print(model_x)
         ax_xd_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_xd)[:, 1], 'b-*')
+                    dt, np.array(model_xd)[:, 1], 'b:')
         ax_xd_error.plot(np.array(range(len(hist_theta))) *
-                    dt, np.array(model_xd)[:, 2], 'r-*')
+                    dt, np.array(model_xd)[:, 2], 'r:')
 
     # Angle Error
     ax_th_error.plot(np.array(range(len(hist_theta))) *

@@ -1,5 +1,6 @@
 """mrac_control.py
 Model Reference Adaptive Control
+Run with `mrac_control.py`.
 
 Author: Cherie Ho
 
@@ -35,12 +36,12 @@ class MRAC_control:
         self.cmd = None # Final output to actuator
 
         # Parameters
-        self.lc_param = {"P": 1, "D": 1} #! handtuned
+        self.lc_param = {"P": 1, "D": 2} # linear compensator gains #! handtuned
         self.Rp = np.diag(np.tile([self.lc_param["P"]], (3,))) #! hardcoded
         self.Rd = np.diag(np.tile([self.lc_param["D"]], (3,))) #! hardcoded
-        self.rm_param = {"P": 1, "D": 1}  # ! handtuned
+        self.rm_param = {"P": 0.35, "D": 1} # reference model gains # ! handtuned
 
-        # History
+        # Model state history
         self.m_x_hist = []
         self.m_xd_hist = []
 
@@ -65,9 +66,6 @@ class MRAC_control:
             for position control, acceleration from ref model
         """
         self.m_x_hist.append(np.copy(self.x_r[:3]))
-        # self.m_x_hist.append([1,2,3])
-        # print(self.x_r[:3])
-        # print("Model", self.m_x_hist)
         self.m_xd_hist.append(np.copy(self.x_r[3:]))
         model_error = self.x_c - self.x_r
         error_pos = model_error[0:3]  # command - reference
@@ -75,9 +73,9 @@ class MRAC_control:
         self.v_cr = self.rm_param["D"] * (des_vel - self.x_r[3:])
 
     def update_model_state(self, dt):
-        """Integrate reference states"""
+        """Integrate reference states """
         acc_ref = self.v_cr - self.v_h # acceleration, TODO: check if subtract hedge?
-        self.x_r[3:] = self.x_r[3:] + acc_ref * dt  # vel_ref
+        self.x_r[3:] = self.x_r[3:] + acc_ref * dt  # update vel_ref
         self.x_r[:3] = self.x_r[:3] + self.x_r[3:] * dt  # pos_ref
         # TODO: rotation?
         
@@ -102,9 +100,12 @@ class MRAC_control:
 
         """
 
-        error_pos = self.model_track_error[0:3] # reference - state
+        # error_pos = self.model_track_error[0:3] # reference - state
+        error_pos = self.x_r[0:3] - self.state["x"]
         des_vel = self.lc_param["P"] * error_pos
         self.v_lc = self.lc_param["D"] * (des_vel - self.state["xdot"])
+        # print("self.v_lc", self.v_lc)
+        # self.v_lc = self.lc_param["P"] * error_pos
         
         
 
@@ -112,7 +113,7 @@ class MRAC_control:
         """Invert dynamics. For outer loop, given v_tot, compute attitude.
         Similar to control allocator.
 
-        TODO: do mapping?
+        TODO: do 1-1 mapping?
         Parameters
         ----------
         self.v_tot
@@ -139,6 +140,7 @@ class MRAC_control:
         des_pitch = des_angle[0] * np.cos(yaw) + des_angle[1] * np.sin(yaw)
         des_roll = des_angle[0] * np.sin(yaw) - des_angle[1] * np.cos(yaw)
 
+
         # TODO: move to attitude controller?
         des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
         des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
@@ -146,6 +148,11 @@ class MRAC_control:
         # TODO: currently, set yaw as constant
         des_yaw = yaw
         des_theta = [des_roll, des_pitch, des_yaw]
+
+        # vertical (acc_z -> thrust)
+        thrust = param_dict["m"] * self.v_tot[2] #  = F = ma
+        # print("thrust", thrust)
+
         
         return des_theta
 
@@ -195,7 +202,7 @@ def main():
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
              "xdot": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, -25])),  
+             "theta": np.radians(np.array([0, 0, 0])),  
              "thetadot": np.radians(np.array([0, 0, 0]))  
              }
              
@@ -223,11 +230,12 @@ def main():
 
 
     # Step through simulation
-    for t in range(100):
-
+    num_steps = 1000
+    for t in range(num_steps):
+        # print("t", t)
         # Set desired position
         # des_pos = np.array([5 + np.sin(0.1*t), 0.01*t, 10])
-        des_pos = np.array([10, 0, 10])
+        des_pos = np.array([8, 0, 10])
         mrac.x_c = np.hstack((des_pos, np.array([0, 0, 0])))
 
         # MRAC Loop
@@ -251,7 +259,7 @@ def main():
 
     print("plotting")
     # for t in range(100):
-    t = 99
+    t = num_steps - 1
     # # Visualize quadrotor and angle error
     ax.cla()
     visualize_quad_quadhist(ax, quad_hist, t)
