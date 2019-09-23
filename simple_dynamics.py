@@ -30,8 +30,8 @@ class ECBF_control():
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 0
-        Kd = 0
+        Kp = 100
+        Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
         # pass
@@ -94,7 +94,7 @@ class ECBF_control():
         )
 
         # print("h,hd", self.compute_h_hd(obs))
-        b_ineq = extra + self.K @ self.compute_h_hd(obs)
+        b_ineq = extra - self.K @ self.compute_h_hd(obs)
         return b_ineq
 
     def compute_safe_control(self,obs):
@@ -110,9 +110,9 @@ class ECBF_control():
         #Make CVXOPT quadratic programming problem
         P = matrix(np.eye(2), tc='d')
         q = -1 * matrix(self.compute_nom_control(), tc='d')
-        G = -matrix(A, tc='d')
+        G = -1 * matrix(A, tc='d')
 
-        h = -matrix(b, tc='d')
+        h = -1 * matrix(b, tc='d')
         solvers.options['show_progress'] = False
         sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
 
