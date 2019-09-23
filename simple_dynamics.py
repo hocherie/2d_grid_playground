@@ -5,11 +5,12 @@ from cvxopt import solvers
 
 a = 1
 b = 1
+safety_dist = 1
 class SimpleDynamics():
     def __init__(self):
         ## State space
-        r = np.array([0,-1.3]) # position
-        rd = np.array([0, 1])  # velocity
+        r = np.array([np.array([3,-4])]).T # position
+        rd = np.array([np.array([0, 0])]).T  # velocity
         self.state = {"r":r, "rd":rd}
         ## Params
         self.dt = 10e-3
@@ -18,20 +19,21 @@ class SimpleDynamics():
     
     def step(self, u):
         # rdd = self.u
-        rd = state["rd"] + self.dt * u 
-        r = state["r"] + self.dt * state["rd"]
+        rd = self.state["rd"] + self.dt * u
+        r = self.state["r"] + self.dt * self.state["rd"]
 
-        state["rd"] = rd
-        state["r"]  = r
+        self.state["rd"] = rd
+        self.state["r"]  = r
 
 class ECBF_control():
-    def __init__(self, state):
+    def __init__(self, state, goal=np.array([[0], [4]])):
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 1000
-        Kd = 1000
+        Kp = 0
+        Kd = 0
         self.K = np.array([Kp, Kd])
+        self.goal=goal
         # pass
 
     def plot_h(self):
@@ -40,7 +42,7 @@ class ECBF_control():
         plot_x = np.arange(-5, 5, 0.1)
         plot_y = np.arange(-5, 5, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
-        z = h_func(xx,yy, a=2, b=1, safety_dist=3) > 0
+        z = h_func(xx,yy, a, b, safety_dist) > 0
         h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1])
         # h = plt.contourf(plot_x, plot_y, z)
         plt.xlabel("X")
@@ -54,10 +56,10 @@ class ECBF_control():
 
 
 
-    def compute_h(self, obs=np.array([0, 0])):
+    def compute_h(self, obs=np.array([[0], [0]]).T):
         rel_r = self.state["r"] - obs
         # TODO: a, safety_dist, obs, b
-        hr = h_func(rel_r[0], rel_r[1], a=1, b=1, safety_dist=1)
+        hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
         return hr
     
     def compute_hd(self, obs):
@@ -69,7 +71,9 @@ class ECBF_control():
 
     def compute_A(self, obs):
         rel_r = self.state["r"] - obs
+        # print(rel_r)
         A0 = (4 * np.power(rel_r[0], 3))/(np.power(a, 4))
+        # print(A0.shape)
         A1 = (4 * np.power(rel_r[1], 3))/(np.power(b, 4))
 
         return np.array([np.hstack((A0, A1))])
@@ -89,39 +93,45 @@ class ECBF_control():
             (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
         )
 
-        print("h,hd", self.compute_h_hd(obs))
+        # print("h,hd", self.compute_h_hd(obs))
         b_ineq = extra + self.K @ self.compute_h_hd(obs)
         return b_ineq
 
     def compute_safe_control(self,obs):
         
         A = self.compute_A(obs)
+        # print(A.shape)
         assert(A.shape == (1,2))
-        print(A.shape)
+        
         b_ineq = self.compute_b(obs)
-        print(b_ineq.shape)
-        # assert(b_ineq.shape == (1, 1))
-        # print(b_ineq)
+        #print(b_ineq.shape)
+        #print(b_ineq)
 
-        # Make CVXOPT quadratic programming problem
+        #Make CVXOPT quadratic programming problem
         P = matrix(np.eye(2), tc='d')
         q = -1 * matrix(self.compute_nom_control(), tc='d')
         G = -matrix(A, tc='d')
 
         h = -matrix(b, tc='d')
-
-        sol = solvers.qp(P,q,G, h) # get dictionary for solution
+        solvers.options['show_progress'] = False
+        sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
 
         optimized_u = sol['x']
+        # optimized_u = self.compute_nom_control()
 
         return optimized_u
         # u = np.linalg.pinv(A) @ b_ineq
 
         # return u 
 
-    def compute_nom_control(self):
+    def compute_nom_control(self, Kn=np.array([-0.08, -0.2])):
         #! mock
-        return np.array([0,1.0])
+        # print('goal:', self.goal)
+        # print('state: ', self.state['r'])
+        vd = Kn[0]*(self.state['r'] - self.goal)
+        # print('vd: ', vd)
+        u_nom = Kn[1]*(self.state['rd'] - vd)
+        return u_nom
 
     # def compute_control(self, obs):
 
@@ -136,10 +146,28 @@ def main():
     # pass
     dyn = SimpleDynamics()
     ecbf = ECBF_control(dyn.state)
-    # ecbf.plot_h()
 
-    u_hat = ecbf.compute_safe_control(obs=np.array([0, 0]))
-    print("U!", u_hat)
+    state_hist = []
+    state_hist.append(dyn.state['r'])
+
+    for tt in range(10000):
+        # ecbf.plot_h()
+        u_hat = ecbf.compute_safe_control(obs=np.array([[0], [0]]))
+        #print("U!", u_hat)
+        dyn.step(u_hat)
+        ecbf.state = dyn.state
+        state_hist.append(dyn.state['r'])
+        # if(tt % 100 == 0):
+        #     print(dyn.state['r'])
+        #     print(dyn.state['rd'])
+    
+    state_hist = np.array(state_hist)
+    plt.plot(state_hist[:,0], state_hist[:,1])
+    plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+    plt.plot(state_hist[-1,0], state_hist[-1,1], '*k')
+    ecbf.plot_h()
+    
+
 
 
 if __name__=="__main__":
