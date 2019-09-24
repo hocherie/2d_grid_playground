@@ -19,11 +19,17 @@ Includes:
 from dynamics import QuadDynamics, QuadHistory
 from controller import go_to_position, pi_attitude_control
 from visualize_dynamics import visualize_error_quadhist, visualize_quad_quadhist
+from mrac_adapt import MRAC_Adapt
+from sim_utils import *
 import numpy as np
 import matplotlib.pyplot as plt
 
 class MRAC_control:
     def __init__(self, state):
+        # Initialize adaptive element
+        self.ad_elem = MRAC_Adapt()
+
+        # Initialize states
         self.state = state
         self.x_c = None # external command. input to ref model
         self.x_r = np.hstack((self.state["x"], self.state["xdot"])) # states of reference model #TODO: check
@@ -186,6 +192,19 @@ class MRAC_control:
             Adaptive element output
 
         """
+        # TODO: get body-frame velocity and acceleration using current rotation
+        rot_W2B = get_rot_matrix(self.state["theta"])
+        vel_b = np.dot(rot_W2B, self.state["xdot"]) # body-frame velocity
+        acc_b = np.dot(rot_W2B, self.state["xdd"]) # body-frame acceleration #TODO: get world acceleration
+
+        adapt_xin = np.array([[1, 0, 0, 0, 0, 0]]).T #! mock
+        assert(adapt_xin.shape == (6, 1))
+
+        # Forward Pass (compute output with W and V)
+        acc_ad_b = net.forward(x_in)
+
+        # TODO: convert body frame acceleration to world frame
+
         pass
 
     def update_model_track_err(self):
@@ -270,6 +289,28 @@ def main():
     plt.show()
 
 
+def test_net():
+    state = {"x": np.array([5, 0, 10]),
+             "xdot": np.zeros(3,),
+             "theta": np.radians(np.array([0, 0, -25])),
+             "thetadot": np.radians(np.array([0, 0, 0]))
+             }
+    net = MRAC_Adapt()
+    mrac = MRAC_control(state)
+
+    # x_in: body velocity (3, ), body acceleration (3, )
+    x_in = np.array([[1, 0, 0, 0, 0, 0]]).T  # ! Mock input
+    assert(x_in.shape == (6, 1))
+
+    ## NN iteration
+    # Forward Pass (compute output with W and V)
+    acc_ad_b = net.forward(x_in)
+    # print(acc_ad_b)
+
+    # Back prop (update W, V)
+    track_error = np.array([[0.1, 0, 0, 0, 0, 0]]).T  # ! mock error
+    assert(track_error.shape == (6, 1))
+    net.updateWeights(x_in, mrac.Rp, mrac.Rd, track_error)
 
 
 if __name__ == '__main__':

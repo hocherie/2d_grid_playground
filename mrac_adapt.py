@@ -10,6 +10,7 @@ Date: 9/24/2019
 Based on Kannan and Johnson's `Model Reference Adaptive Control with a Constrained Linear Reference Model`
 
 """
+import numpy as np
 class MRAC_Adapt():
     def __init__(self):
         self.n_in = 6
@@ -135,24 +136,9 @@ class MRAC_Adapt():
         return np.vstack((np.zeros((1, self.n_hid)), np.diag(np.ndarray.flatten(self.sigmoid_prime(s)))))
 
 
-def test_net():
-    state = {"x": np.array([5, 0, 10]),
-             "xdot": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, -25])),
-             "thetadot": np.radians(np.array([0, 0, 0]))
-             }
-    net = MRAC_Adapt()
-    mrac = MRAC_control(state)
 
-    X = np.array([[1, 0, 0, 0, 0, 0]]).T  # ! Mock
-    assert(X.shape == (6, 1))
-    ## NN iteration
 
-    # Forward Pass (compute output with W and V)
-    acc_ad_b = net.forward(X)
-    # print(acc_ad_b)
-
-    # Back prop (update W, V)
-    track_error = np.array([[0.1, 0, 0, 0, 0, 0]]).T
-    assert(track_error.shape == (6, 1))
-    net.updateWeights(X, mrac.Rp, mrac.Rd, track_error)
+if __name__ == '__main__':
+    pass
+    # test_net()
+    # main()
