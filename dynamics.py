@@ -14,7 +14,7 @@ from controller import *
 import time
 
 # Physical constants
-g = -9.81 # FLU
+g = -9.81  # FLU
 m = 0.5
 L = 0.25
 k = 3e-6
@@ -24,24 +24,26 @@ kd = 0.001
 dt = 0.1
 maxrpm = 10000
 maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
-param_dict = {"g": g, "m":m, "L":L, "k":k, "b":b, "I":I, "kd":kd, "dt":dt, "maxRPM":maxrpm, "maxthrust":maxthrust}
-
+param_dict = {"g": g, "m": m, "L": L, "k": k, "b": b, "I": I,
+              "kd": kd, "dt": dt, "maxRPM": maxrpm, "maxthrust": maxthrust}
 
 
 def init_state():
     """Initialize state dictionary. """
-    state = {"x": np.array([5, 0, 10]) , 
-                "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
-                "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
-                }
+    state = {"x": np.array([5, 0, 10]),
+             "xdot": np.zeros(3,),
+             "xdd": np.zeros(3,),
+             "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
+             "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
+             }
     return state
+
 
 class QuadDynamics:
     def __init__(self):
         self.param_dict = param_dict
-        
-    def step_dynamics(self,state, u):
+
+    def step_dynamics(self, state, u):
         """Step dynamics given current state and input. Updates state dict.
         
         Parameters
@@ -55,14 +57,12 @@ class QuadDynamics:
         Updates
         -------
         state : dict 
-            updates with next x, xdot, theta, thetadot  
+            updates with next x, xdot, xdd, theta, thetadot  
         """
         # Compute angular velocity vector from angular velocities
         omega = self.thetadot2omega(state["thetadot"], state["theta"])
 
         # Compute linear and angular accelerations given input and state
-        # TODO: combine state
-        # TODO: move param to member variable
         a = self.calc_acc(u, state["theta"], state["xdot"], m, g, k, kd)
         omegadot = self.calc_ang_acc(u, omega, I, L, b, k)
 
@@ -76,16 +76,13 @@ class QuadDynamics:
         # Update state dictionary
         state["x"] = x
         state["xdot"] = xdot
+        state["xdd"] = a
         state["theta"] = theta
         state["thetadot"] = thetadot
 
         return state
 
-
-
-
-
-    def compute_thrust(self, u,k):
+    def compute_thrust(self, u, k):
         """Compute total thrust (in body frame) given control input and thrust coefficient. Used in calc_acc().
         Clips if above maximum rpm (10000).
 
@@ -104,7 +101,7 @@ class QuadDynamics:
         T : (3, ) np.ndarray
             thrust in body frame
         """
-        
+
         u = np.clip(u, 0, self.param_dict["maxRPM"]**2)
         T = np.array([0, 0, k*np.sum(u)])
         # print("u", u)
@@ -134,9 +131,9 @@ class QuadDynamics:
 
         """
         tau = np.array([
-                L * k * (u[0]-u[2]),
-                L * k * (u[1]-u[3]),
-                b * (u[0]-u[1] + u[2]-u[3])
+            L * k * (u[0]-u[2]),
+            L * k * (u[1]-u[3]),
+            b * (u[0]-u[1] + u[2]-u[3])
         ])
 
         return tau
@@ -173,7 +170,7 @@ class QuadDynamics:
         T = np.dot(R, thrust)
         Fd = -kd * xdot
         a = gravity + 1/m * T + Fd
-        return a 
+        return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
         """Computes angular acceleration (in body frame) given control input, angular velocity vector, inertial matrix.
@@ -240,7 +237,6 @@ class QuadDynamics:
 
         return thetadot
 
-
     def thetadot2omega(self, thetadot, theta):
         """Compute angular velocity vector from euler angle and associated rates.
         
@@ -278,9 +274,10 @@ class QuadDynamics:
 
         return w
 
+
 def basic_input():
     """Return arbritrary input to test simulator"""
-    return np.power(np.array([950, 700, 700, 700]),2)
+    return np.power(np.array([950, 700, 700, 700]), 2)
 
 
 class QuadHistory():
@@ -290,7 +287,7 @@ class QuadHistory():
         self.hist_theta = []
         self.hist_des_theta = []
         self.hist_thetadot = []
-        self.hist_xdot = [[0,0,0]]
+        self.hist_xdot = [[0, 0, 0]]
         self.hist_xdotdot = []
         self.hist_x = []
         self.hist_y = []
@@ -318,14 +315,13 @@ class QuadHistory():
         self.hist_des_xdot.append(des_xdot_i)
         self.hist_des_x.append(des_x_i)
         self.hist_pos.append(x)
-        
-        self.hist_xdotdot.append(xdotdot)
+
+        self.hist_xdotdot.append(state["xdd"])
 
 
 def main():
     print("start")
     t_start = time.time()
-
 
     # Set desired position
     des_pos = np.array([3, -3, 9])
@@ -340,12 +336,10 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(2, 3, 1, projection='3d')
     ax_x_error = fig.add_subplot(2, 3, 2)
-    ax_xd_error = fig.add_subplot(2,3,3)
+    ax_xd_error = fig.add_subplot(2, 3, 3)
     ax_xdd_error = fig.add_subplot(2, 3, 4)
     ax_th_error = fig.add_subplot(2, 3, 5)
     ax_thr_error = fig.add_subplot(2, 3, 6)
-    
-
 
     # Initialize controller errors
     integral_p_err = None
@@ -354,28 +348,34 @@ def main():
     # Initialize quad dynamics
     quad_dyn = QuadDynamics()
 
+    sim_iter = 100
     # Step through simulation
-    for t in range(100):
+    for t in range(sim_iter):
 
         if t * dt > 20:
-            des_pos = np.array([0,0,10])
+            des_pos = np.array([0, 0, 10])
         ax.cla()
-        des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
-        des_thrust, des_theta, integral_v_err = pi_velocity_control(state, des_vel, integral_v_err) # attitude control
-        des_theta_deg = np.degrees(des_theta) # for logging
+        des_vel, integral_p_err = pi_position_control(
+            state, des_pos, integral_p_err)
+        des_thrust, des_theta, integral_v_err = pi_velocity_control(
+            state, des_vel, integral_v_err)  # attitude control
+        des_theta_deg = np.degrees(des_theta)  # for logging
         u = pi_attitude_control(
             state, des_theta, des_thrust, param_dict)  # attitude control
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
-        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, dt)  # update history for plotting
+        # update history for plotting
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, dt)
 
     for t in range(100):
-        # # Visualize quadrotor and angle error
+    # # Visualize quadrotor and angle error
         ax.cla()
         visualize_quad_quadhist(ax, quad_hist, t)
-        visualize_error_quadhist(ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, dt)
-
+        visualize_error_quadhist(
+            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, dt)
 
     print("Time Elapsed:", time.time() - t_start)
+
+
 if __name__ == '__main__':
     main()
