@@ -150,18 +150,20 @@ class MRAC_control:
         des_theta = [des_roll, des_pitch, des_yaw]
 
         # vertical (acc_z -> thrust)
-        thrust = param_dict["m"] * self.v_tot[2] #  = F = ma
-        # print("thrust", thrust)
+        
+        thrust = (param_dict["m"] * (self.v_tot[2] - param_dict["g"]))/param_dict["k"] #  T=ma/k
+        max_tot_u = 400000000.0 # TODO: make in param_dict
+        des_thrust_pc = thrust/max_tot_u
 
         
-        return des_theta
+        return des_theta, des_thrust_pc
 
-    def plant(self, des_theta, quad_dyn):
+    def plant(self, des_theta, quad_dyn, des_thrust_pc):
          # Thrust #TODO: assume hover thrust
-        tot_u_constant = 408750 * 4  # hover, for four motors
-        max_tot_u = 400000000.0
-        thrust_pc_constant = tot_u_constant/max_tot_u
-        des_thrust_pc = thrust_pc_constant
+        # tot_u_constant = 408750 * 4  # hover, for four motors
+        # max_tot_u = 400000000.0
+        # thrust_pc_constant = tot_u_constant/max_tot_u
+        # des_thrust_pc = thrust_pc_constant
 
         u = pi_attitude_control(self.state, des_theta, des_thrust_pc, quad_dyn.param_dict)
         self.state = quad_dyn.step_dynamics(self.state, u)
@@ -244,10 +246,10 @@ def main():
         mrac.linear_compensator() # updates v_lc
 
         mrac.compute_v_tot() # sums to v_tot
-        des_theta = mrac.dynamic_inversion(quad_dyn.param_dict)
+        des_theta, des_thrust_pc = mrac.dynamic_inversion(quad_dyn.param_dict)
 
         mrac.update_model_state(quad_dyn.param_dict["dt"]) # integrate model acc 
-        mrac.plant(des_theta, quad_dyn)
+        mrac.plant(des_theta, quad_dyn, des_thrust_pc)
 
 
         # update history for plotting
