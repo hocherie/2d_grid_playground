@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 class MRAC_control:
     def __init__(self, state):
         # Initialize adaptive element
-        self.ad_elem = MRAC_Adapt()
+        self.ad_net = MRAC_Adapt()
 
         # Initialize states
         self.state = state
@@ -192,20 +192,24 @@ class MRAC_control:
             Adaptive element output
 
         """
-        # TODO: get body-frame velocity and acceleration using current rotation
+        # get current body-frame velocity and acceleration using current rotation
         rot_W2B = get_rot_matrix(self.state["theta"])
         vel_b = np.dot(rot_W2B, self.state["xdot"]) # body-frame velocity
         acc_b = np.dot(rot_W2B, self.state["xdd"]) # body-frame acceleration #TODO: get world acceleration
 
-        adapt_xin = np.array([[1, 0, 0, 0, 0, 0]]).T #! mock
+        adapt_xin = np.atleast_2d(np.hstack((vel_b, acc_b))).T
         assert(adapt_xin.shape == (6, 1))
 
-        # Forward Pass (compute output with W and V)
-        acc_ad_b = net.forward(x_in)
+        # Forward Pass (compute output with W and V) to get adaptive body acceleration 
+        acc_ad_b = self.ad_net.forward(adapt_xin)
 
-        # TODO: convert body frame acceleration to world frame
+        # convert body frame adaptive acceleration to world frame
+        rot_B2W = np.linalg.pinv(rot_W2B)
+        acc_w = np.ndarray.flatten(np.dot(rot_B2W, acc_ad_b))
+        assert(acc_w.shape == (3,))
+        
 
-        pass
+        self.v_ad = acc_w
 
     def update_model_track_err(self):
         "model_track_err = x_r - x"
@@ -215,14 +219,17 @@ class MRAC_control:
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
-
-        self.v_tot = self.v_cr + self.v_lc - self.v_ad
+        v_tot = self.v_cr + self.v_lc - self.v_ad
+        assert(v_tot.shape == (3, ))
+        self.v_tot = v_tot
+        
         
 
 def main():
     # Initialize quadrotor state #TODO: make to general function, not sure where
     state = {"x": np.array([5, 0, 10]),
              "xdot": np.zeros(3,),
+             "xdd": np.zeros(3,),
              "theta": np.radians(np.array([0, 0, 0])),  
              "thetadot": np.radians(np.array([0, 0, 0]))  
              }
@@ -263,6 +270,7 @@ def main():
         mrac.update_model_track_err() # updates model_track_err
         mrac.ref_model() # updates self.v_cr
         mrac.linear_compensator() # updates v_lc
+        mrac.adaptive_element() # update self.v_ad
 
         mrac.compute_v_tot() # sums to v_tot
         des_theta, des_thrust_pc = mrac.dynamic_inversion(quad_dyn.param_dict)
