@@ -117,7 +117,7 @@ class MRAC_Adapt():
 
         self.W = self.W + self.gam_w * w_grad  # TODO: check sign
         self.V = self.V + self.gam_v * v_grad  # TODO: is gamma learning rate?
-        print("weight updated")
+        # print("weight updated")
 
     def sigmoid_orig(self, s):
         return 1/(1+np.exp(-s))

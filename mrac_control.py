@@ -28,6 +28,7 @@ class MRAC_control:
     def __init__(self, state):
         # Initialize adaptive element
         self.ad_net = MRAC_Adapt()
+        self.adapt_xin = None
 
         # Initialize states
         self.state = state
@@ -38,7 +39,7 @@ class MRAC_control:
         self.v_ad = np.zeros((3,))  # Output of adaptive element
         self.v_lc = np.zeros((3,)) # Output of linear compensator
         self.v_tot = np.zeros((3,))
-        self.model_track_error = np.zeros((6,))
+        self.model_track_error = np.zeros((6,)) # TODO: double check body frame
         self.cmd = None # Final output to actuator
 
         # Parameters
@@ -197,8 +198,10 @@ class MRAC_control:
         vel_b = np.dot(rot_W2B, self.state["xdot"]) # body-frame velocity
         acc_b = np.dot(rot_W2B, self.state["xdd"]) # body-frame acceleration #TODO: get world acceleration
 
-        adapt_xin = np.atleast_2d(np.hstack((vel_b, acc_b))).T
+        adapt_xin = np.atleast_2d(np.hstack((vel_b, acc_b))).T # TODO: move to own function
         assert(adapt_xin.shape == (6, 1))
+        self.adapt_xin = adapt_xin
+        
 
         # Forward Pass (compute output with W and V) to get adaptive body acceleration 
         acc_ad_b = self.ad_net.forward(adapt_xin)
@@ -213,15 +216,31 @@ class MRAC_control:
 
     def update_model_track_err(self):
         "model_track_err = x_r - x"
-        # self.x_r = np.array([7,3,10, 0, 0, 0]) #! mock
-        self.model_track_error = self.x_r - np.hstack((self.state["x"], self.state["xdot"]))
-        # print(self.model_track_error)
+        # TODO: in body frame?
+
+        pos_err_w = self.x_r[:3] - self.state["x"]
+        vel_err_w = self.x_r[3:] - self.state["xdot"]
+
+        rot_W2B = get_rot_matrix(self.state["theta"])
+
+        pos_err_b = np.dot(rot_W2B, pos_err_w)
+        vel_err_b = np.dot(rot_W2B, vel_err_w)
+
+        model_track_err_b = np.atleast_2d(np.hstack((pos_err_b, vel_err_b))).T
+        assert(model_track_err_b.shape == (6,1))
+        self.model_track_error = model_track_err_b
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
         v_tot = self.v_cr + self.v_lc - self.v_ad
         assert(v_tot.shape == (3, ))
         self.v_tot = v_tot
+
+    def train_adapt(self):
+        """Train network."""
+        self.update_model_track_err() # body frame
+        assert(self.model_track_error.shape == (6, 1))
+        self.ad_net.updateWeights(self.adapt_xin, self.Rp, self.Rd, self.model_track_error)
         
         
 
@@ -278,6 +297,8 @@ def main():
         mrac.update_model_state(quad_dyn.param_dict["dt"]) # integrate model acc 
         mrac.plant(des_theta, quad_dyn, des_thrust_pc)
 
+        # Train (update weight given model error)
+        mrac.train_adapt()
 
         # update history for plotting
         ax.cla()
