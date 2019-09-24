@@ -25,8 +25,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class MRAC_control:
-    def __init__(self, state):
+    def __init__(self, state, use_adapt=True):
         # Initialize adaptive element
+        self.use_adapt = use_adapt
         self.ad_net = MRAC_Adapt()
         self.adapt_xin = None
 
@@ -51,6 +52,7 @@ class MRAC_control:
         # Model state history
         self.m_x_hist = []
         self.m_xd_hist = []
+        self.m_track_hist = []
 
     def ref_model(self):
         """Linear reference model. Minimizes error
@@ -166,11 +168,6 @@ class MRAC_control:
         return des_theta, des_thrust_pc
 
     def plant(self, des_theta, quad_dyn, des_thrust_pc):
-         # Thrust #TODO: assume hover thrust
-        # tot_u_constant = 408750 * 4  # hover, for four motors
-        # max_tot_u = 400000000.0
-        # thrust_pc_constant = tot_u_constant/max_tot_u
-        # des_thrust_pc = thrust_pc_constant
 
         u = pi_attitude_control(self.state, des_theta, des_thrust_pc, quad_dyn.param_dict)
         self.state = quad_dyn.step_dynamics(self.state, u)
@@ -229,9 +226,15 @@ class MRAC_control:
         model_track_err_b = np.atleast_2d(np.hstack((pos_err_b, vel_err_b))).T
         assert(model_track_err_b.shape == (6,1))
         self.model_track_error = model_track_err_b
+        self.m_track_hist.append(np.ndarray.flatten(model_track_err_b))
 
     def compute_v_tot(self):
         "v_tot = v_cr + v_lc - v_ad"
+        # Set input to zero if not used
+        if not self.use_adapt:
+            v_ad = np.zeros((3,))
+            print("Not using adaptive element")
+
         v_tot = self.v_cr + self.v_lc - self.v_ad
         assert(v_tot.shape == (3, ))
         self.v_tot = v_tot
@@ -254,7 +257,7 @@ def main():
              }
              
     # Initialize MRAC controller
-    mrac = MRAC_control(state)
+    mrac = MRAC_control(state, use_adapt=True)
 
 
     # Initialize quadrotor dynamics and logger and parameters
@@ -263,7 +266,7 @@ def main():
     
 
     # Initialize visualization
-    fig = plt.figure()
+    fig = plt.figure(0)
     ax = fig.add_subplot(2, 3, 1, projection='3d')
     ax_x_error = fig.add_subplot(2, 3, 2)
     ax_xd_error = fig.add_subplot(2, 3, 3)
@@ -281,7 +284,7 @@ def main():
     for t in range(num_steps):
         # print("t", t)
         # Set desired position
-        # des_pos = np.array([5 + np.sin(0.1*t), 0.01*t, 10])
+        # des_pos = np.array([5 + 3*np.sin(0.1*t), 0.01*t, 10])
         des_pos = np.array([8, 0, 10])
         mrac.x_c = np.hstack((des_pos, np.array([0, 0, 0])))
 
@@ -308,6 +311,8 @@ def main():
             des_theta), des_vel, des_pos, quad_dyn.param_dict["dt"])
 
     print("plotting")
+    print(np.array(mrac.m_track_hist).shape)
+
     # for t in range(100):
     t = num_steps - 1
     # # Visualize quadrotor and angle error
@@ -315,31 +320,38 @@ def main():
     visualize_quad_quadhist(ax, quad_hist, t)
     visualize_error_quadhist(
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"], mrac.m_x_hist, mrac.m_xd_hist)
+    # plt.show()
+
+    # Plot tracking error
+    plt.figure(1)
+    plt.plot(mrac.m_track_hist)
+    plt.legend(["x", "y", "z", "v_x", "v_y", "v_z"])
+    plt.title("Tracking Error")
     plt.show()
 
 
-def test_net():
-    state = {"x": np.array([5, 0, 10]),
-             "xdot": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, -25])),
-             "thetadot": np.radians(np.array([0, 0, 0]))
-             }
-    net = MRAC_Adapt()
-    mrac = MRAC_control(state)
+# def test_net():
+#     state = {"x": np.array([5, 0, 10]),
+#              "xdot": np.zeros(3,),
+#              "theta": np.radians(np.array([0, 0, -25])),
+#              "thetadot": np.radians(np.array([0, 0, 0]))
+#              }
+#     net = MRAC_Adapt()
+#     mrac = MRAC_control(state)
 
-    # x_in: body velocity (3, ), body acceleration (3, )
-    x_in = np.array([[1, 0, 0, 0, 0, 0]]).T  # ! Mock input
-    assert(x_in.shape == (6, 1))
+#     # x_in: body velocity (3, ), body acceleration (3, )
+#     x_in = np.array([[1, 0, 0, 0, 0, 0]]).T  # ! Mock input
+#     assert(x_in.shape == (6, 1))
 
-    ## NN iteration
-    # Forward Pass (compute output with W and V)
-    acc_ad_b = net.forward(x_in)
-    # print(acc_ad_b)
+#     ## NN iteration
+#     # Forward Pass (compute output with W and V)
+#     acc_ad_b = net.forward(x_in)
+#     # print(acc_ad_b)
 
-    # Back prop (update W, V)
-    track_error = np.array([[0.1, 0, 0, 0, 0, 0]]).T  # ! mock error
-    assert(track_error.shape == (6, 1))
-    net.updateWeights(x_in, mrac.Rp, mrac.Rd, track_error)
+#     # Back prop (update W, V)
+#     track_error = np.array([[0.1, 0, 0, 0, 0, 0]]).T  # ! mock error
+#     assert(track_error.shape == (6, 1))
+#     net.updateWeights(x_in, mrac.Rp, mrac.Rd, track_error)
 
 
 if __name__ == '__main__':
