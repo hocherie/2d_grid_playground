@@ -44,11 +44,11 @@ class MRAC_control:
         self.cmd = None # Final output to actuator
 
         # Parameters
-        self.lc_param = {"P": 1.75, "D": 1} # linear compensator gains #! handtuned
+        self.lc_param = {"P": 3, "D": 1} # linear compensator gains #! handtuned
         self.Rp = np.diag(np.tile([self.lc_param["P"]], (3,))) #! hardcoded
         self.Rd = np.diag(np.tile([self.lc_param["D"]], (3,))) #! hardcoded
         # self.rm_param = {"P": 0.35, "D": 1} # reference model gains # ! handtuned
-        self.rm_param = {"P": 1.75, "D": 1} # reference model gains # ! handtuned
+        self.rm_param = {"P": 3, "D": 1} # reference model gains # ! handtuned
 
         # Model state history
         self.m_x_hist = []
@@ -234,10 +234,10 @@ class MRAC_control:
         "v_tot = v_cr + v_lc - v_ad"
         # Set input to zero if not used
         if not self.use_adapt:
-            v_ad = np.zeros((3,))
+            self.v_ad = np.zeros((3,))
             print("Not using adaptive element")
 
-        v_tot = self.v_cr + self.v_lc - self.v_ad
+        v_tot = self.v_cr + self.v_lc + self.v_ad
         assert(v_tot.shape == (3, ))
         self.v_tot = v_tot
 
@@ -256,12 +256,13 @@ def main():
              "xdot": np.zeros(3,),
              "xdd": np.zeros(3,),
              "theta": np.radians(np.array([0, 0, 0])),  
-            #  "thetadot": np.radians(np.array([0, 0, 0]))  
-            "thetadot" : np.radians(2 * deviation * np.random.rand(3,) - deviation) #add some noise
+             "thetadot": np.radians(np.array([0, 0, 0]))  
+            # "thetadot" : np.radians(2 * deviation * np.random.rand(3,) - deviation) #add some noise
              }
              
     # Initialize MRAC controller
-    mrac = MRAC_control(state, use_adapt=True)
+    use_adapt = True
+    mrac = MRAC_control(state, use_adapt=use_adapt)
 
 
     # Initialize quadrotor dynamics and logger and parameters
@@ -327,13 +328,18 @@ def main():
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, quad_dyn.param_dict["dt"], mrac.m_x_hist, mrac.m_xd_hist)
     # plt.show()
 
+    # Save 
+    np.savetxt('yes_adapt.txt', np.array(mrac.m_track_hist)[:, :3])
+
     # Plot tracking error
     plt.figure(1)
     plt.plot(np.array(mrac.m_track_hist)[:, :3])
     plt.legend(["x", "y", "z"])
     plt.ylim([-1,1])
-    plt.title("Tracking Error")
+    plt.title("Tracking Error (Adaptive)")
     plt.show()
+
+    
 
 
 # def test_net():

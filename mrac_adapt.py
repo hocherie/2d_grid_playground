@@ -20,9 +20,10 @@ class MRAC_Adapt():
         # Initialize weights (W,V)
         # TODO: what's good weight init
         # plus one to include theta row
-        self.V = np.zeros((self.n_in + 1, self.n_hid))
+        # self.V = np.zeros((self.n_in + 1, self.n_hid))
+        self.V = np.random.rand(self.n_in + 1, self.n_hid) *0
         # plus one to include theta row
-        self.W = np.zeros((self.n_hid + 1, self.n_out))
+        self.W = np.random.rand(self.n_hid + 1, self.n_out) *0 # TODO: only works with w=0
 
         # Initialize bias constants
         self.bw = 1  # ! taken from Basti's code
@@ -33,9 +34,8 @@ class MRAC_Adapt():
         self.theta_w = np.zeros((self.n_out, 1))
 
         # Initialize learning parameters
-        self.k_track = 0.01  # taken from Basti's code
-        self.gam_v = 0.1  # taken from Basti's
-        self.gam_w = 0.1  # taken from Basti's
+        self.gam_v = 0.07  # learning rate
+        self.gam_w = 0.07  # learning rate
         self.k = 0.0001  # taken from Basti's
 
     def forward(self, X):
@@ -68,7 +68,7 @@ class MRAC_Adapt():
         P1[:3, 3:] = 0.5 * Rp @ Rd  # upper right
         P1[3:, :3] = 0.5 * Rp @ Rd  # lower left
         P1[3:, 3:] = Rp  # lower right
-        P = (1/(0.25*self.n_hid) + np.power(self.bw, 2)) * P1  # TODO: b_w
+        P = (1/((0.25*self.n_hid) + np.power(self.bw, 2))) * P1  # TODO: b_w
         r = (track_error.T @ P @ B).T  # TODO: move to common
 
         # Final compute
@@ -99,13 +99,13 @@ class MRAC_Adapt():
         P1[3:, :3] = 0.5 * Rp @ Rd  # lower left
         P1[3:, 3:] = Rp  # lower right
 
-        P = (1/(0.25*self.n_hid) + np.power(self.bw, 2)) * P1  # TODO: b_w
+        P = (1/((0.25*self.n_hid) + np.power(self.bw, 2))) * P1  # TODO: b_w
         r = (track_error.T @ P @ B).T  # TODO: move to common
 
         # Final compute (eq. 52)
         first_inner = X_bar @ (
             r.T @ self.W.T @ self.sigmoid_p_bw(self.V.T @ X_bar))
-        second_inner = self.k_track * \
+        second_inner = self.k * \
             np.linalg.norm(track_error) * self.V  # TODO: @ or *
         v_grad = -self.gam_v * (first_inner + second_inner)
 
