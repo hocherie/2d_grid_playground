@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cvxopt import matrix
 from cvxopt import solvers
+import cvxpy as cp
 
 a = 1
 b = 1
@@ -9,38 +10,39 @@ safety_dist = 1
 class SimpleDynamics():
     def __init__(self):
         ## State space
-        r = np.array([np.array([3,-4])]).T # position
+        r = np.array([np.array([1,-4])]).T # position
         rd = np.array([np.array([0, 0])]).T  # velocity
         self.state = {"r":r, "rd":rd}
         ## Params
-        self.dt = 10e-3
+        self.dt = 10e-2
 
         # self.u = zeros(2,1) # acceleration, control input
     
     def step(self, u):
         # rdd = self.u
-        rd = self.state["rd"] + self.dt * u
+        rd = self.state["rd"] + self.dt * u - self.state["rd"] * 0.02
         r = self.state["r"] + self.dt * self.state["rd"]
 
         self.state["rd"] = rd
         self.state["r"]  = r
 
 class ECBF_control():
-    def __init__(self, state, goal=np.array([[0], [4]])):
+    def __init__(self, state, goal=np.array([[0], [10]])):
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 100
-        Kd = 3
+        Kp = 3
+        Kd = 4
         self.K = np.array([Kp, Kd])
         self.goal=goal
+        self.use_safe = True
         # pass
 
     def plot_h(self):
         obs = np.array([0,0]) #! mock
         
-        plot_x = np.arange(-5, 5, 0.1)
-        plot_y = np.arange(-5, 5, 0.1)
+        plot_x = np.arange(-10, 10, 0.1)
+        plot_y = np.arange(-10, 10, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
         z = h_func(xx,yy, a, b, safety_dist) > 0
         h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1])
@@ -49,10 +51,10 @@ class ECBF_control():
         plt.ylabel("Y")
         proxy = [plt.Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0])
                  for pc in h.collections]
-        plt.legend(proxy, ["Unsafe: range(-1 to 0)","Safe: range(0 to 1)"])
-
-        
-        plt.show()
+        # plt.legend(proxy, ["Unsafe: range(-1 to 0)","Safe: range(0 to 1)"])
+        plt.legend()
+        plt.pause(0.00000001)
+        # plt.show()
 
 
 
@@ -97,27 +99,61 @@ class ECBF_control():
         b_ineq = extra - self.K @ self.compute_h_hd(obs)
         return b_ineq
 
-    def compute_safe_control(self,obs):
-        
+    def compute_safe_control2(self, obs):
         A = self.compute_A(obs)
-        # print(A.shape)
-        assert(A.shape == (1,2))
-        
+        A = -A # flip A
+
         b_ineq = self.compute_b(obs)
-        #print(b_ineq.shape)
-        #print(b_ineq)
+        num_dir = 2
+        # Create two scalar optimization variables.
+        uhat = cp.Variable((num_dir,1))
+        unom = self.compute_nom_control()
+        # y = cp.Variable()
 
-        #Make CVXOPT quadratic programming problem
-        P = matrix(np.eye(2), tc='d')
-        q = -1 * matrix(self.compute_nom_control(), tc='d')
-        G = -1 * matrix(A, tc='d')
+        # Create constraints.
+        # constraints = [x + y == 1,
+        #             x - y >= 1]
+        constraints = [A @ uhat <= b_ineq]
 
-        h = -1 * matrix(b, tc='d')
-        solvers.options['show_progress'] = False
-        sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
+        # Form objective.
+        obj = cp.Minimize(cp.atoms.norm.norm(uhat - unom))
 
-        optimized_u = sol['x']
-        # optimized_u = self.compute_nom_control()
+        # Form and solve problem.
+        prob = cp.Problem(obj, constraints)
+        prob.solve()
+
+        return uhat.value 
+
+        # # The optimal dual variable (Lagrange multiplier) for
+        # # a constraint is stored in constraint.dual_value.
+        # print("optimal (x + y == 1) dual variable", constraints[0].dual_value)
+        # print("optimal (x - y >= 1) dual variable", constraints[1].dual_value)
+        # print("x - y value:", (x - y).value)
+
+    def compute_safe_control(self,obs):
+        if self.use_safe:
+            A = self.compute_A(obs)
+            # print(A.shape)
+            assert(A.shape == (1,2))
+            
+            b_ineq = self.compute_b(obs)
+            #print(b_ineq.shape)
+            #print(b_ineq)
+
+            #Make CVXOPT quadratic programming problem
+            P = matrix(np.eye(2), tc='d')
+            q = -1 * matrix(self.compute_nom_control(), tc='d')
+            G = -1 * matrix(A, tc='d')
+
+            h = -1 * matrix(b_ineq, tc='d')
+            solvers.options['show_progress'] = False
+            sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
+
+            optimized_u = sol['x']
+
+        else:
+            optimized_u = self.compute_nom_control()
+
 
         return optimized_u
         # u = np.linalg.pinv(A) @ b_ineq
@@ -131,6 +167,10 @@ class ECBF_control():
         vd = Kn[0]*(self.state['r'] - self.goal)
         # print('vd: ', vd)
         u_nom = Kn[1]*(self.state['rd'] - vd)
+
+        print("u_nom", u_nom)
+        if np.linalg.norm(u_nom) > 0.01:
+            u_nom = (u_nom/np.linalg.norm(u_nom))* 0.01
         return u_nom
 
     # def compute_control(self, obs):
@@ -157,15 +197,23 @@ def main():
         dyn.step(u_hat)
         ecbf.state = dyn.state
         state_hist.append(dyn.state['r'])
-        # if(tt % 100 == 0):
-        #     print(dyn.state['r'])
-        #     print(dyn.state['rd'])
-    
-    state_hist = np.array(state_hist)
-    plt.plot(state_hist[:,0], state_hist[:,1])
-    plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-    plt.plot(state_hist[-1,0], state_hist[-1,1], '*k')
-    ecbf.plot_h()
+        if(tt % 100 == 0):
+            print(tt)
+            plt.cla()
+            state_hist_plot = np.array(state_hist)
+            nom_cont = ecbf.compute_nom_control()
+            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+                      nom_cont[0]], 
+                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
+            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+                      u_hat[0]],
+                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat[1]], label="Safe")
+            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1])
+            plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
+            # plt.legend()
+            
+            ecbf.plot_h()
     
 
 
