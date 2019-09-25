@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cvxopt import matrix
 from cvxopt import solvers
-import cvxpy as cp
 
 a = 1
 b = 1
@@ -31,20 +30,20 @@ class ECBF_control():
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 3
-        Kd = 4
+        Kp = 4
+        Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.use_safe = True
         # pass
 
-    def plot_h(self):
-        obs = np.array([0,0]) #! mock
+    def plot_h(self, obs):
+        # obs = np.array([0,1]) #! mock
         
         plot_x = np.arange(-10, 10, 0.1)
         plot_y = np.arange(-10, 10, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
-        z = h_func(xx,yy, a, b, safety_dist) > 0
+        z = h_func(xx - obs[0], yy - obs[1], a, b, safety_dist) > 0
         h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1])
         # h = plt.contourf(plot_x, plot_y, z)
         plt.xlabel("X")
@@ -99,37 +98,6 @@ class ECBF_control():
         b_ineq = extra - self.K @ self.compute_h_hd(obs)
         return b_ineq
 
-    def compute_safe_control2(self, obs):
-        A = self.compute_A(obs)
-        A = -A # flip A
-
-        b_ineq = self.compute_b(obs)
-        num_dir = 2
-        # Create two scalar optimization variables.
-        uhat = cp.Variable((num_dir,1))
-        unom = self.compute_nom_control()
-        # y = cp.Variable()
-
-        # Create constraints.
-        # constraints = [x + y == 1,
-        #             x - y >= 1]
-        constraints = [A @ uhat <= b_ineq]
-
-        # Form objective.
-        obj = cp.Minimize(cp.atoms.norm.norm(uhat - unom))
-
-        # Form and solve problem.
-        prob = cp.Problem(obj, constraints)
-        prob.solve()
-
-        return uhat.value 
-
-        # # The optimal dual variable (Lagrange multiplier) for
-        # # a constraint is stored in constraint.dual_value.
-        # print("optimal (x + y == 1) dual variable", constraints[0].dual_value)
-        # print("optimal (x - y >= 1) dual variable", constraints[1].dual_value)
-        # print("x - y value:", (x - y).value)
-
     def compute_safe_control(self,obs):
         if self.use_safe:
             A = self.compute_A(obs)
@@ -137,8 +105,6 @@ class ECBF_control():
             assert(A.shape == (1,2))
             
             b_ineq = self.compute_b(obs)
-            #print(b_ineq.shape)
-            #print(b_ineq)
 
             #Make CVXOPT quadratic programming problem
             P = matrix(np.eye(2), tc='d')
@@ -190,9 +156,10 @@ def main():
     state_hist = []
     state_hist.append(dyn.state['r'])
 
+    new_obs = np.array([[0], [1]])
     for tt in range(100000):
         # ecbf.plot_h()
-        u_hat = ecbf.compute_safe_control(obs=np.array([[0], [0]]))
+        u_hat = ecbf.compute_safe_control(obs=new_obs)
         #print("U!", u_hat)
         dyn.step(u_hat)
         ecbf.state = dyn.state
@@ -213,7 +180,7 @@ def main():
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
             # plt.legend()
             
-            ecbf.plot_h()
+            ecbf.plot_h(new_obs)
     
 
 
