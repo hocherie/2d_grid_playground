@@ -17,7 +17,7 @@ class SimpleDynamics():
         self.dt = 10e-2
 
         # self.u = zeros(2,1) # acceleration, control input
-    
+
     def step(self, u):
         # rdd = self.u
         rd = self.state["rd"] + self.dt * u - self.state["rd"] * 0.02
@@ -63,7 +63,7 @@ class ECBF_control():
         # TODO: a, safety_dist, obs, b
         hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
         return hr
-    
+
     def compute_hd(self, obs):
         rel_r = self.state["r"] - obs
         rd = self.state["rd"] # obs falls out
@@ -85,13 +85,13 @@ class ECBF_control():
         hd = self.compute_hd(obs)
 
         return np.vstack((h, hd))
-    
+
     def compute_b(self, obs):
         """extra + K * [h hd]"""
         rel_r = self.state["r"] - obs
         rd = self.state["rd"]
         extra = -(
-            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) + 
+            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
             (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
         )
 
@@ -158,7 +158,7 @@ class ECBF_control():
         return optimized_u
         # u = np.linalg.pinv(A) @ b_ineq
 
-        # return u 
+        # return u
 
     def compute_nom_control(self, Kn=np.array([-0.08, -0.2])):
         #! mock
@@ -190,7 +190,7 @@ def main():
     state_hist = []
     state_hist.append(dyn.state['r'])
 
-    for tt in range(10000):
+    for tt in range(100000):
         # ecbf.plot_h()
         u_hat = ecbf.compute_safe_control(obs=np.array([[0], [0]]))
         #print("U!", u_hat)
