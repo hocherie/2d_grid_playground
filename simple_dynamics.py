@@ -16,10 +16,10 @@ class SimpleDynamics():
         self.dt = 10e-3
 
         # self.u = zeros(2,1) # acceleration, control input
-    
+
     def step(self, u):
         # rdd = self.u
-        rd = self.state["rd"] + self.dt * u
+        rd = self.state["rd"] + self.dt * u - self.state["rd"]*0.01
         r = self.state["r"] + self.dt * self.state["rd"]
 
         self.state["rd"] = rd
@@ -30,15 +30,15 @@ class ECBF_control():
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 100
-        Kd = 3
+        Kp = 0
+        Kd = -1
         self.K = np.array([Kp, Kd])
         self.goal=goal
         # pass
 
     def plot_h(self):
         obs = np.array([0,0]) #! mock
-        
+
         plot_x = np.arange(-5, 5, 0.1)
         plot_y = np.arange(-5, 5, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
@@ -51,7 +51,7 @@ class ECBF_control():
                  for pc in h.collections]
         plt.legend(proxy, ["Unsafe: range(-1 to 0)","Safe: range(0 to 1)"])
 
-        
+
         plt.show()
 
 
@@ -61,7 +61,7 @@ class ECBF_control():
         # TODO: a, safety_dist, obs, b
         hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
         return hr
-    
+
     def compute_hd(self, obs):
         rel_r = self.state["r"] - obs
         rd = self.state["rd"] # obs falls out
@@ -83,13 +83,13 @@ class ECBF_control():
         hd = self.compute_hd(obs)
 
         return np.vstack((h, hd))
-    
+
     def compute_b(self, obs):
         """extra + K * [h hd]"""
         rel_r = self.state["r"] - obs
         rd = self.state["rd"]
         extra = -(
-            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) + 
+            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
             (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
         )
 
@@ -98,11 +98,11 @@ class ECBF_control():
         return b_ineq
 
     def compute_safe_control(self,obs):
-        
+
         A = self.compute_A(obs)
         # print(A.shape)
         assert(A.shape == (1,2))
-        
+
         b_ineq = self.compute_b(obs)
         #print(b_ineq.shape)
         #print(b_ineq)
@@ -117,12 +117,12 @@ class ECBF_control():
         sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
 
         optimized_u = sol['x']
-        # optimized_u = self.compute_nom_control()
+        #optimized_u = self.compute_nom_control()
 
         return optimized_u
         # u = np.linalg.pinv(A) @ b_ineq
 
-        # return u 
+        # return u
 
     def compute_nom_control(self, Kn=np.array([-0.08, -0.2])):
         #! mock
@@ -150,7 +150,7 @@ def main():
     state_hist = []
     state_hist.append(dyn.state['r'])
 
-    for tt in range(10000):
+    for tt in range(100000):
         # ecbf.plot_h()
         u_hat = ecbf.compute_safe_control(obs=np.array([[0], [0]]))
         #print("U!", u_hat)
@@ -160,13 +160,13 @@ def main():
         # if(tt % 100 == 0):
         #     print(dyn.state['r'])
         #     print(dyn.state['rd'])
-    
+
     state_hist = np.array(state_hist)
     plt.plot(state_hist[:,0], state_hist[:,1])
     plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
     plt.plot(state_hist[-1,0], state_hist[-1,1], '*k')
     ecbf.plot_h()
-    
+
 
 
 
