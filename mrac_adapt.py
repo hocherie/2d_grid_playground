@@ -34,24 +34,33 @@ class MRAC_Adapt():
         self.theta_w = np.zeros((self.n_out, 1))
 
         # Initialize learning parameters
-        self.gam_v = 0.07  # learning rate
-        self.gam_w = 0.07  # learning rate
+        self.gam_v = 0.06  # learning rate
+        self.gam_w = 0.06  # learning rate
         self.k = 0.0001  # taken from Basti's
+        self.Kr = 0.001 # robustifying gain
 
     def forward(self, X):
         X_bar = np.vstack((self.bw, X))
         # input to hidden
         # 10x 1 # TODO: should it be transposed?
         z1 = self.V.T @ X_bar + self.bv * self.theta_v
-        assert(z1.shape == (10, 1))
+        assert(z1.shape == (self.n_hid, 1))
         z2 = self.sigmoid_bw(z1)  # 11 x 1
-        assert(z2.shape == (11, 1))
+        assert(z2.shape == (self.n_hid+1, 1))
         # TODO: include bias?
 
         # hidden to output
         out = self.W.T @ z2 + self.bw * self.theta_w  # 3 x 1
-        assert(out.shape == (3, 1))
-        return out
+
+        # # Add robustifying term
+        # Z_v = np.hstack((self.V, np.zeros((self.V.shape[0], self.W.shape[1]))))
+        # Z_w = np.hstack(((np.zeros((self.W.shape[0], self.V.shape[1]))), self.W))
+        # Z = np.vstack((Z_v, Z_w))
+        # acc_rob= - self.Kr * (np.linalg.norm(Z))  # TODO: check
+
+        # out_robust = out + acc_rob
+        # assert(out_robust.shape == (3, 1))
+        return out # TODO: change back to robust
 
     def compute_wgrad(self, X_in, Rp, Rd, track_error):
         """-gamma_w(sigma - sigma'V^TX)r^T + k abs(e) W"""
@@ -76,7 +85,7 @@ class MRAC_Adapt():
         sig_vt_x = self.sigmoid_bw(self.V.T @ X_bar)
         # TODO: check sigmoid prime
         sigp_vt_x = self.sigmoid_p_bw(self.V.T @ X_bar)
-        assert(sigp_vt_x.shape == (11, 10))
+        assert(sigp_vt_x.shape == (self.n_hid+1, self.n_hid))
         first_inner = (sig_vt_x - sigp_vt_x @ (self.V.T @ X_bar)) @ r.T
 
         second_inner = self.k * np.linalg.norm(track_error) * self.W

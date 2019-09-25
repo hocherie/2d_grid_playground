@@ -55,6 +55,11 @@ class MRAC_control:
         self.m_xd_hist = []
         self.m_track_hist = []
 
+        # Acceleration hist
+        self.v_ad_hist = []
+        self.v_lc_hist = []
+        self.v_cr_hist = []
+
     def ref_model(self):
         """Linear reference model. Minimizes error
         between command and reference state.
@@ -211,6 +216,7 @@ class MRAC_control:
         assert(acc_w.shape == (3,))
         
 
+
         self.v_ad = acc_w
 
     def update_model_track_err(self):
@@ -237,9 +243,14 @@ class MRAC_control:
             self.v_ad = np.zeros((3,))
             print("Not using adaptive element")
 
-        v_tot = self.v_cr + self.v_lc + self.v_ad
+        v_tot = self.v_cr + self.v_lc + self.v_ad #! why do we add v_ad? paper is subtract
         assert(v_tot.shape == (3, ))
         self.v_tot = v_tot
+
+        # Save history
+        self.v_ad_hist.append(self.v_ad)
+        self.v_lc_hist.append(self.v_lc)
+        self.v_cr_hist.append(self.v_cr)
 
     def train_adapt(self):
         """Train network."""
@@ -329,7 +340,10 @@ def main():
     # plt.show()
 
     # Save 
-    np.savetxt('yes_adapt.txt', np.array(mrac.m_track_hist)[:, :3])
+    if use_adapt:
+        np.savetxt('yes_adapt.txt', np.array(mrac.m_track_hist)[:, :3])
+    else:
+        np.savetxt('no_adapt.txt', np.array(mrac.m_track_hist)[:, :3])
 
     # Plot tracking error
     plt.figure(1)
@@ -337,9 +351,17 @@ def main():
     plt.legend(["x", "y", "z"])
     plt.ylim([-1,1])
     plt.title("Tracking Error (Adaptive)")
-    plt.show()
-
     
+
+    # Plot accelerations
+    plt.figure(2)
+    plt.title("Component accelerations")
+    plt.plot(np.array(mrac.v_ad_hist)[:,0]) # plot x
+    plt.plot(np.array(mrac.v_cr_hist)[:, 0])
+    plt.plot(np.array(mrac.v_lc_hist)[:, 0])
+    plt.legend(["Adaptive", "Ref Model", "Linear Compensator"])
+
+    plt.show()
 
 
 # def test_net():
