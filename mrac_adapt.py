@@ -34,7 +34,7 @@ class MRAC_Adapt():
 
         # Initialize learning parameters
         self.k_track = 0.01  # taken from Basti's code
-        self.gam_v = 0.01  # taken from Basti's
+        self.gam_v = 0.1  # taken from Basti's
         self.gam_w = 0.1  # taken from Basti's
         self.k = 0.0001  # taken from Basti's
 

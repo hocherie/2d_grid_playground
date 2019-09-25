@@ -44,10 +44,11 @@ class MRAC_control:
         self.cmd = None # Final output to actuator
 
         # Parameters
-        self.lc_param = {"P": 1, "D": 2} # linear compensator gains #! handtuned
+        self.lc_param = {"P": 1.75, "D": 1} # linear compensator gains #! handtuned
         self.Rp = np.diag(np.tile([self.lc_param["P"]], (3,))) #! hardcoded
         self.Rd = np.diag(np.tile([self.lc_param["D"]], (3,))) #! hardcoded
-        self.rm_param = {"P": 0.35, "D": 1} # reference model gains # ! handtuned
+        # self.rm_param = {"P": 0.35, "D": 1} # reference model gains # ! handtuned
+        self.rm_param = {"P": 1.75, "D": 1} # reference model gains # ! handtuned
 
         # Model state history
         self.m_x_hist = []
@@ -159,8 +160,9 @@ class MRAC_control:
         des_theta = [des_roll, des_pitch, des_yaw]
 
         # vertical (acc_z -> thrust)
-        
-        thrust = (param_dict["m"] * (self.v_tot[2] - param_dict["g"]))/param_dict["k"] #  T=ma/k
+        # m = 0.5 #! mock, ask Basti if make sense
+        thrust = (param_dict["m"] * (self.v_tot[2] - param_dict["g"])
+                  )/param_dict["k"]  # T=ma/k
         max_tot_u = 400000000.0 # TODO: make in param_dict
         des_thrust_pc = thrust/max_tot_u
 
@@ -249,11 +251,13 @@ class MRAC_control:
 
 def main():
     # Initialize quadrotor state #TODO: make to general function, not sure where
+    deviation = 100
     state = {"x": np.array([5, 0, 10]),
              "xdot": np.zeros(3,),
              "xdd": np.zeros(3,),
              "theta": np.radians(np.array([0, 0, 0])),  
-             "thetadot": np.radians(np.array([0, 0, 0]))  
+            #  "thetadot": np.radians(np.array([0, 0, 0]))  
+            "thetadot" : np.radians(2 * deviation * np.random.rand(3,) - deviation) #add some noise
              }
              
     # Initialize MRAC controller
@@ -282,10 +286,11 @@ def main():
     # Step through simulation
     num_steps = 1000
     for t in range(num_steps):
+        # quad_dyn.param_dict["m"] = 10# losing power
         # print("t", t)
         # Set desired position
         # des_pos = np.array([5 + 3*np.sin(0.1*t), 0.01*t, 10])
-        des_pos = np.array([8, 0, 10])
+        des_pos = np.array([7, 0, 10])
         mrac.x_c = np.hstack((des_pos, np.array([0, 0, 0])))
 
         # MRAC Loop
@@ -324,8 +329,9 @@ def main():
 
     # Plot tracking error
     plt.figure(1)
-    plt.plot(mrac.m_track_hist)
-    plt.legend(["x", "y", "z", "v_x", "v_y", "v_z"])
+    plt.plot(np.array(mrac.m_track_hist)[:, :3])
+    plt.legend(["x", "y", "z"])
+    plt.ylim([-1,1])
     plt.title("Tracking Error")
     plt.show()
 

@@ -20,7 +20,7 @@ L = 0.25
 k = 3e-6
 b = 1e-7
 I = np.diag([5e-3, 5e-3, 10e-3])
-kd = 0.001
+kd = 0.25
 dt = 0.1
 maxrpm = 10000
 maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
@@ -170,6 +170,9 @@ class QuadDynamics:
         T = np.dot(R, thrust)
         Fd = -kd * xdot
         a = gravity + 1/m * T + Fd
+        # print("Before", a)
+        # a[0] += 2 #! mock disturbance
+        # print("After", a)
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
