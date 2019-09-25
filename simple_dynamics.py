@@ -9,7 +9,7 @@ safety_dist = 1
 class SimpleDynamics():
     def __init__(self):
         ## State space
-        r = np.array([np.array([1,-4])]).T # position
+        r = np.array([np.array([0,-4])]).T # position
         rd = np.array([np.array([0, 0])]).T  # velocity
         self.state = {"r":r, "rd":rd}
         ## Params
@@ -39,7 +39,7 @@ class ECBF_control():
 
     def plot_h(self, obs):
         # obs = np.array([0,1]) #! mock
-        
+
         plot_x = np.arange(-10, 10, 0.1)
         plot_y = np.arange(-10, 10, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
@@ -103,7 +103,7 @@ class ECBF_control():
             A = self.compute_A(obs)
             # print(A.shape)
             assert(A.shape == (1,2))
-            
+
             b_ineq = self.compute_b(obs)
 
             #Make CVXOPT quadratic programming problem
@@ -170,7 +170,7 @@ def main():
             state_hist_plot = np.array(state_hist)
             nom_cont = ecbf.compute_nom_control()
             plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      nom_cont[0]], 
+                      nom_cont[0]],
                      [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
             plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
                       u_hat[0]],
@@ -179,9 +179,9 @@ def main():
             plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
             # plt.legend()
-            
+
             ecbf.plot_h(new_obs)
-    
+
 
 
 

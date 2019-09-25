@@ -32,8 +32,8 @@ class ECBF_control():
         self.state = state
         self.shape_dict = {} #TODO: a, b
         # self.gain_dict = {} #TODO: Kp, Kd
-        Kp = 4
-        Kd = 3
+        Kp = 3
+        Kd = 4
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.use_safe = True
@@ -41,7 +41,7 @@ class ECBF_control():
 
     def plot_h(self, obs):
         # obs = np.array([0,1]) #! mock
-        
+
         plot_x = np.arange(-10, 10, 0.1)
         plot_y = np.arange(-10, 10, 0.1)
         xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
@@ -67,7 +67,7 @@ class ECBF_control():
 
     def compute_hd(self, obs):
         rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        rd = np.atleast_2d(self.state["xdot"][:2]).T 
+        rd = np.atleast_2d(self.state["xdot"][:2]).T
         term1 = (4 * np.power(rel_r[0],3) * rd[0])/(np.power(a,4))
         term2 = (4 * np.power(rel_r[1],3) * rd[1])/(np.power(b,4))
         return term1+term2
@@ -101,7 +101,7 @@ class ECBF_control():
         if self.use_safe:
             A = self.compute_A(obs)
             assert(A.shape == (1,2))
-            
+
             b_ineq = self.compute_b(obs)
 
             #Make CVXOPT quadratic programming problem
@@ -163,7 +163,7 @@ def main():
         u_hat_acc = np.ndarray.flatten(np.array(np.vstack((u_hat_acc,np.zeros((1,1))))))  # acceleration
         assert(u_hat_acc.shape == (3,))
         u_motor = go_to_acceleration(state, u_hat_acc, dyn.param_dict) # desired motor rate ^2
-        
+
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"])
@@ -176,15 +176,15 @@ def main():
                       u_hat_acc[0]],
                      [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
             plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      nom_cont[0]], 
+                      nom_cont[0]],
                      [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
 
             plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
             plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
-            
+
             ecbf.plot_h(new_obs)
-    
+
 
 
 
