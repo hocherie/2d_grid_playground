@@ -94,7 +94,7 @@ class ECBF_control():
             (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
         )
 
-        b_ineq = extra - self.K @ self.compute_h_hd(obs)
+        b_ineq = extra - np.dot(self.K, self.compute_h_hd(obs))
         return b_ineq
 
     def compute_safe_control(self,obs):
