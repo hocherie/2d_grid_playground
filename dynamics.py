@@ -14,18 +14,20 @@ from controller import *
 import time
 
 # Physical constants
-g = -9.81  # FLU
-m = 0.5
-L = 0.25
-k = 3e-6
-b = 1e-7
-I = np.diag([5e-3, 5e-3, 10e-3])
-kd = 0.001
-dt = 0.1
-maxrpm = 10000
-maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
-param_dict = {"g": g, "m": m, "L": L, "k": k, "b": b, "I": I,
-              "kd": kd, "dt": dt, "maxRPM": maxrpm, "maxthrust": maxthrust}
+def init_param_dict():
+    g = -9.81  # FLU
+    m = 0.5
+    L = 0.25
+    k = 3e-6
+    b = 1e-7
+    I = np.diag([5e-3, 5e-3, 10e-3])
+    kd = 0.001
+    dt = 0.01
+    maxrpm = 10000
+    maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
+    param_dict = {"g": g, "m": m, "L": L, "k": k, "b": b, "I": I,
+                "kd": kd, "dt": dt, "maxRPM": maxrpm, "maxthrust": maxthrust}
+    return param_dict
 
 
 def init_state():
@@ -33,14 +35,14 @@ def init_state():
     state = {"x": np.array([5, 0, 10]),
              "xdot": np.zeros(3,),
              "xdd": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
+             "theta": np.radians(np.array([0, 0, 20])),  # ! hardcoded
              "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
              }
     return state
 
 
 class QuadDynamics:
-    def __init__(self):
+    def __init__(self, param_dict):
         self.param_dict = param_dict
 
     def step_dynamics(self, state, u):
@@ -59,6 +61,15 @@ class QuadDynamics:
         state : dict 
             updates with next x, xdot, xdd, theta, thetadot  
         """
+        m = self.param_dict["m"]
+        g = self.param_dict["g"]
+        k = self.param_dict["k"]
+        kd = self.param_dict["kd"]
+        I = self.param_dict["I"]
+        b = self.param_dict["b"]
+        k = self.param_dict["k"]
+        L = self.param_dict["L"]
+        dt = self.param_dict["dt"]
         # Compute angular velocity vector from angular velocities
         omega = self.thetadot2omega(state["thetadot"], state["theta"])
 
@@ -170,6 +181,8 @@ class QuadDynamics:
         T = np.dot(R, thrust)
         Fd = -kd * xdot
         a = gravity + 1/m * T + Fd
+
+        a[1] += 3
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):

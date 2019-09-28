@@ -2,6 +2,50 @@ import numpy as np
 import math 
 
 
+def dynamic_inversion(des_acc, state, param_dict):
+    """Invert dynamics. For outer loop, given v_tot, compute attitude.
+    Similar to control allocator.
+    TODO: do 1-1 mapping?
+    Parameters
+    ----------
+    self.v_tot
+        total v: v_cr + v_lc - v_ad
+    state #TODO: use self.x
+        state
+    Returns
+    -------
+    desired_theta: np.ndarray(3,)
+        desired roll, pitch, yaw angle (rad) to attitude controller
+    """
+    yaw = state["theta"][2]
+    # tot_u_constant = 408750 * 4  # hover, for four motors
+    # specific_force = tot_u_constant  / param_dict["m"]
+
+    # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf (Eq. 22-24)
+    U1 = np.linalg.norm(des_acc - np.array([0, 0, param_dict["g"]]))
+    des_pitch_noyaw = np.arcsin(des_acc[0] / U1)
+    des_angle = [des_pitch_noyaw,
+                 np.arcsin(des_acc[1] / (U1 * np.cos(des_pitch_noyaw)))]
+    des_pitch = des_angle[0] * np.cos(yaw) + des_angle[1] * np.sin(yaw)
+    des_roll = des_angle[0] * np.sin(yaw) - des_angle[1] * np.cos(yaw)
+
+    # TODO: move to attitude controller?
+    des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
+    des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
+
+    # TODO: currently, set yaw as constant
+    des_yaw = yaw
+    des_theta = [des_roll, des_pitch, des_yaw]
+
+    # vertical (acc_z -> thrust)
+
+    thrust = (param_dict["m"] * (des_acc[2] -
+                                 param_dict["g"]))/param_dict["k"]  # T=ma/k
+    max_tot_u = 400000000.0  # TODO: make in param_dict
+    des_thrust_pc = thrust/max_tot_u
+
+    return des_theta, des_thrust_pc
+
 def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
 
     des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
@@ -47,69 +91,92 @@ def pi_position_control(state, des_pos, integral_p_err=None):
 
     return np.array([des_xv, des_yv, des_zv]), integral_p_err
 
-def pi_velocity_control(state, des_vel, integral_v_err=None):
-    """
-    Assume desire zero angular velocity? Also clips min and max roll, pitch.
+def pi_velocity_control(state, des_vel):
+        Pxd = -1.2
+        Pyd = -1.2
+        Pzd = -0.001
+        [xv, yv, zv] = state["xdot"]
+        [xv_d, yv_d, zv_d] = des_vel
+        yaw = state["theta"][2]
 
-    Parameter
-    ---------
-    state : dict 
-        contains current x, xdot, theta, thetadot
+        # Compute error
+        v_err = state["xdot"] - des_vel
+        # accumulate error integral
+        # integral_v_err += v_err
+
+        # Get PID Error
+        # TODO: vectorize
+
+        pid_err_x = Pxd * v_err[0] 
+        pid_err_y = Pyd * v_err[1] 
+        pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
+
+        des_acc = np.array([pid_err_x, pid_err_y, pid_err_z])
+
+        return des_acc
+# def pi_velocity_control(state, des_vel, integral_v_err=None):
+#     """
+#     Assume desire zero angular velocity? Also clips min and max roll, pitch.
+
+#     Parameter
+#     ---------
+#     state : dict 
+#         contains current x, xdot, theta, thetadot
         
-    des_vel : (3, ) np.ndarray
-        desired linear velocity
+#     des_vel : (3, ) np.ndarray
+#         desired linear velocity
 
-    integral_v_err : (3, ) np.ndarray
-        keeps track of integral error
+#     integral_v_err : (3, ) np.ndarray
+#         keeps track of integral error
 
-    Returns
-    -------
-    uv : (3, ) np.ndarray
-        roll, pitch, yaw 
-    """
-    if integral_v_err is None:
-        integral_v_err = np.zeros((3,))
+#     Returns
+#     -------
+#     uv : (3, ) np.ndarray
+#         roll, pitch, yaw 
+#     """
+#     if integral_v_err is None:
+#         integral_v_err = np.zeros((3,))
     
-    Pxd = -0.12
-    Ixd = -0.005 #-0.005
-    Pyd = -0.12
-    Iyd = -0.005 #0.005
-    Pzd = -0.001
-    # TODO: change to return roll pitch yawrate thrust
+#     Pxd = -0.12
+#     Ixd = -0.005 #-0.005
+#     Pyd = -0.12
+#     Iyd = -0.005 #0.005
+#     Pzd = -0.001
+#     # TODO: change to return roll pitch yawrate thrust
 
-    [xv, yv, zv] = state["xdot"]
-    [xv_d, yv_d, zv_d] = des_vel
-    yaw = state["theta"][2]
+#     [xv, yv, zv] = state["xdot"]
+#     [xv_d, yv_d, zv_d] = des_vel
+#     yaw = state["theta"][2]
 
-    # Compute error
-    v_err = state["xdot"] - des_vel
-    # accumulate error integral
-    integral_v_err += v_err
+#     # Compute error
+#     v_err = state["xdot"] - des_vel
+#     # accumulate error integral
+#     integral_v_err += v_err
     
-    # Get PID Error
-    # TODO: vectorize
+#     # Get PID Error
+#     # TODO: vectorize
     
-    pid_err_x = Pxd * v_err[0] + Ixd * integral_v_err[0]
-    pid_err_y = Pyd * v_err[1] + Iyd * integral_v_err[1]
-    pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
+#     pid_err_x = Pxd * v_err[0] + Ixd * integral_v_err[0]
+#     pid_err_y = Pyd * v_err[1] + Iyd * integral_v_err[1]
+#     pid_err_z = Pzd * v_err[2] # TODO: project onto attitude angle?
     
 
-    tot_u_constant = 408750 * 4 # hover, for four motors
-    max_tot_u = 400000000.0
-    thrust_pc_constant = tot_u_constant/max_tot_u
-    des_thrust_pc = thrust_pc_constant + pid_err_z
+#     tot_u_constant = 408750 * 4 # hover, for four motors
+#     max_tot_u = 400000000.0
+#     thrust_pc_constant = tot_u_constant/max_tot_u
+#     des_thrust_pc = thrust_pc_constant + pid_err_z
     
-    des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
-    des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
+#     des_pitch = pid_err_x * np.cos(yaw) + pid_err_y * np.sin(yaw)
+#     des_roll = pid_err_x * np.sin(yaw) - pid_err_y * np.cos(yaw)
 
-    # TODO: move to attitude controller?
-    des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
-    des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
+#     # TODO: move to attitude controller?
+#     des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
+#     des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
 
-    # TODO: currently, set yaw as constant
-    des_yaw = state["theta"][2]
+#     # TODO: currently, set yaw as constant
+#     des_yaw = state["theta"][2]
 
-    return des_thrust_pc, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
+#     return des_thrust_pc, np.array([des_roll, des_pitch, state["theta"][2]]), integral_v_err
 
 
 def pi_attitude_control(state, des_theta, des_thrust_pc, param_dict):
