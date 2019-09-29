@@ -3,6 +3,7 @@ sys.path.insert(1, '../Quadcopter_SimCon-master/Simulation')
 from trajectory import Trajectory
 from dynamics import QuadDynamics, init_state, QuadHistory, init_param_dict
 from controller import go_to_acc
+# from l1_control import L1_control
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,12 +27,25 @@ def vel_control(des_vel,current_vel, des_acc):
 
 
 def main():
+    # Initialize quadrotor history tracker
+    quad_hist = QuadHistory()
+
+    # Initialize visualization
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 3, 1, projection='3d')
+    ax_x_error = fig.add_subplot(2, 3, 2)
+    ax_xd_error = fig.add_subplot(2, 3, 3)
+    ax_xdd_error = fig.add_subplot(2, 3, 4)
+    ax_th_error = fig.add_subplot(2, 3, 5)
+    ax_thr_error = fig.add_subplot(2, 3, 6)
+
     # Initialize quad dynamics
     param_dict = init_param_dict()
     quad_dyn = QuadDynamics(param_dict)
     # l1_control = L1_control()
     Ts = quad_dyn.param_dict["dt"]
     state = init_state(np.array([0,0,0]))
+    # l1_control = L1_control()
 
     # TODO: set different waypoints
     # Choose trajectory settings
@@ -86,12 +100,15 @@ def main():
         state = quad_dyn.step_dynamics(state, u)
         stateHist[i,:] = state["x"]
 
+        # update history for plotting
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"], np.copy(
+            np.zeros((3,))), np.copy(np.zeros((3,))))
         # print(sDes)
         t += Ts
 
     # Visualization
-    is_plot = False 
-    is_animate = True  
+    is_plot = True 
+    is_animate = False  
 
     # Plot Velocity
     plt.plot(np.arange(num_iter) * Ts, trajHist[:,3:6])

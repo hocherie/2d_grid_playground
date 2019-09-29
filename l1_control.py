@@ -2,6 +2,7 @@ import time
 from dynamics import QuadDynamics, init_state, QuadHistory, init_param_dict
 from controller import *
 from visualize_dynamics import *
+from min_snap_traj import *
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,7 +10,7 @@ class L1_control():
     def __init__(self):
         self.adapt_gain = 100 
         # TODO: find principled way to get cutoff frequency
-        self.a_lp = 0.006  # Low Pass Filter freq~1Hz, 
+        self.a_lp = 0.0006  # Low Pass Filter freq~1Hz, 
         # https://www.wolframalpha.com/input/?i=arccos%28%28x%5E2%2B2x-2%29%2F%282x-2%29%29100%2F2pi+%3D+1
         self.velrate = np.zeros((3,))
         self.model_vel = np.zeros((3,))
@@ -49,11 +50,9 @@ def main():
     print("start")
     t_start = time.time()
 
-    # Set desired position
-    des_pos = np.array([0, 0, 0])
 
     # Initialize Robot State
-    state = init_state()
+    state = init_state([0,0,0])
 
     # Initialize quadrotor history tracker
     quad_hist = QuadHistory()
@@ -70,24 +69,42 @@ def main():
     # Initialize quad dynamics
     param_dict = init_param_dict()
     quad_dyn = QuadDynamics(param_dict)
+    Ts = quad_dyn.param_dict["dt"]
     l1_control = L1_control()
-    
     # Step through simulation
     sim_iter = 10000
-    for t in range(sim_iter):
-        des_pos = np.array([10,0,0])
-        des_vel,_ = pi_position_control(state, des_pos)
-        des_acc = pi_velocity_control(
-            state, des_vel)
+    # Initialize min snap
+    trajSelect = np.array([6,4,0])
+    ctrlType = "xyz_pos"
+    trajHist = np.zeros((sim_iter, 19))
+    stateHist = np.zeros((sim_iter, 3))
+    traj = Trajectory(ctrlType, trajSelect)
+
+    t = 0
+    for i in range(sim_iter):
+        sDes = traj.desiredState(t, Ts)
+        trajHist[i, :] = sDes
+        des_pos = sDes[0:3]
+        # print(des_pos)
+        des_vel = sDes[3:6]
+        des_acc = sDes[6:9]
+
+        # get current state
+        current_pos = state["x"]
+        current_vel = state["xdot"]
+        # control quadrotor
+        des_vel = pos_control(des_pos, current_pos, des_vel)
+        des_acc = vel_control(des_vel, current_vel, des_acc)
         des_acc = des_acc - l1_control.l1_out
         l1_control.compute_control(state["xdot"], des_acc, param_dict["dt"])
         u, des_theta_deg = go_to_acc(state, des_acc, param_dict)
-
         # Step dynamics and update state dict
         state = quad_dyn.step_dynamics(state, u)
+        stateHist[i, :] = state["x"]
 
         # update history for plotting
         quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"],np.copy(l1_control.model_vel), np.copy(l1_control.l1_out))
+        t += Ts
 
     print("Time Elapsed:", time.time() - t_start)
     t = sim_iter - 1
