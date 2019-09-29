@@ -8,10 +8,13 @@ import numpy as np
 class L1_control():
     def __init__(self):
         self.adapt_gain = 100 
+        # TODO: find principled way to get cutoff frequency
+        self.a_lp = 0.006  # ~1Hz, https://www.wolframalpha.com/input/?i=arccos%28%28x%5E2%2B2x-2%29%2F%282x-2%29%29100%2F2pi+%3D+1
         self.velrate = np.zeros((3,))
         self.model_vel = np.zeros((3,))
-        self.ksp = 50 # TODO: what is this?
+        self.ksp = 50 # model gain
         self.true_disturbance = np.zeros((3,))
+        self.l1_out = np.zeros((3,))
 
     def compute_control(self, current_vel, des_acc, dt):
         # Calculate current velocity error
@@ -26,31 +29,22 @@ class L1_control():
         disturbance_rate = -self.adapt_gain * velerr
 
         self.model_vel += dt *velrate 
-        # print(self.model_vel)
-        # print(self.model_vel)
+        self.last_disturbance = np.copy(self.true_disturbance)
         self.true_disturbance += dt * disturbance_rate 
         
-        
-        # self.disturbance = self.true_disturbance # TODO: add windless drag?
-        return self.true_disturbance
+        # Apply low pass filter
+        self.l1_out = self.exp_mov_avg()
+        return self.l1_out
     
-    def numpy_ewma_vectorized_v2(data, window):
+    def exp_mov_avg(self):
+        # self.a_lp
+        last_output = np.copy(self.l1_out)
+        current_input = np.copy(self.true_disturbance)
 
-        alpha = 2 / (window + 1.0)
-        alpha_rev = 1-alpha
-        n = data.shape[0]
-
-        pows = alpha_rev**(np.arange(n+1))
-
-        scale_arr = 1/pows[:-1]
-        offset = data[0]*pows[1:]
-        pw0 = alpha*alpha_rev**(n-1)
-
-        mult = data*pw0*scale_arr
-        cumsums = mult.cumsum()
-        out = offset + cumsums*scale_arr[::-1]
-        return out
-
+        filtered_output = self.a_lp * \
+            current_input + (1-self.a_lp) * last_output
+        return filtered_output
+    
 def main():
     print("start")
     t_start = time.time()
@@ -88,7 +82,7 @@ def main():
         # u, des_acc, des_theta_deg = go_to_velocity(state, des_vel, param_dict)
         des_acc = pi_velocity_control(
             state, des_vel)
-        des_acc_1 = des_acc - l1_control.true_disturbance
+        des_acc_1 = des_acc - l1_control.l1_out
         # des_acc[2] = 0
         l1_control.compute_control(state["xdot"],des_acc_1, param_dict["dt"])
         # print("before", des_acc)
@@ -100,7 +94,7 @@ def main():
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
         # update history for plotting
-        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"],np.copy(l1_control.model_vel), np.copy(l1_control.true_disturbance))
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"],np.copy(l1_control.model_vel), np.copy(l1_control.l1_out))
 
     print("Time Elapsed:", time.time() - t_start)
     t = sim_iter - 1

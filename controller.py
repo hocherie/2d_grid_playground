@@ -110,7 +110,8 @@ def pi_position_control(state, des_pos, integral_p_err=None):
 def pi_velocity_control(state, des_vel):
         Pxd = -1.2
         Pyd = -1.2
-        Pzd = 0
+        Pzd = -0.5
+        
         [xv, yv, zv] = state["xdot"]
         [xv_d, yv_d, zv_d] = des_vel
         yaw = state["theta"][2]

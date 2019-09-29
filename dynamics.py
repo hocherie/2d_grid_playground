@@ -182,7 +182,9 @@ class QuadDynamics:
         Fd = -kd * xdot
         a = gravity + 1/m * T + Fd
 
+        # Mock acceleration disturbance
         a[0] += 1
+        a[1] += -0.5
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
