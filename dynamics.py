@@ -182,7 +182,7 @@ class QuadDynamics:
         Fd = -kd * xdot
         a = gravity + 1/m * T + Fd
 
-        a[1] += 3
+        a[0] += 1
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
@@ -308,8 +308,10 @@ class QuadHistory():
         self.hist_pos = []
         self.hist_des_xdot = []
         self.hist_des_x = []
+        self.model_xdot = []
+        self.model_dist = []
 
-    def update_history(self, state, des_theta_deg_i, des_xdot_i, des_x_i, dt):
+    def update_history(self, state, des_theta_deg_i, des_xdot_i, des_x_i, dt,model_vel,model_dist):
         """Appends current state and desired theta for plotting."""
         x = state["x"]
         xdot = state["xdot"]
@@ -330,6 +332,8 @@ class QuadHistory():
         self.hist_pos.append(x)
 
         self.hist_xdotdot.append(state["xdd"])
+        self.model_xdot.append(model_vel)
+        self.model_dist.append(model_dist)
 
 
 def main():

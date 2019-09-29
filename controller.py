@@ -46,6 +46,22 @@ def dynamic_inversion(des_acc, state, param_dict):
 
     return des_theta, des_thrust_pc
 
+def go_to_velocity(state, des_vel, param_dict):
+    des_acc = pi_velocity_control(
+        state, des_vel)  # attitude control
+    des_theta, des_thrust = dynamic_inversion(des_acc, state, param_dict)
+    des_theta_deg = np.degrees(des_theta)  # for logging
+    u = pi_attitude_control(
+        state, des_theta, des_thrust, param_dict)  # 
+    return u, des_acc, des_theta_deg
+
+def go_to_acc(state,des_acc,param_dict):
+    des_theta, des_thrust = dynamic_inversion(des_acc, state, param_dict)
+    des_theta_deg = np.degrees(des_theta)  # for logging
+    u = pi_attitude_control(
+        state, des_theta, des_thrust, param_dict)  #
+    return u, des_theta_deg
+
 def go_to_position(state, des_pos, param_dict, integral_p_err=None, integral_v_err=None):
 
     des_vel, integral_p_err = pi_position_control(state,des_pos, integral_p_err)
@@ -94,7 +110,7 @@ def pi_position_control(state, des_pos, integral_p_err=None):
 def pi_velocity_control(state, des_vel):
         Pxd = -1.2
         Pyd = -1.2
-        Pzd = -0.001
+        Pzd = 0
         [xv, yv, zv] = state["xdot"]
         [xv_d, yv_d, zv_d] = des_vel
         yaw = state["theta"][2]

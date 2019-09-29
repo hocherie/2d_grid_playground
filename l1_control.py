@@ -1,0 +1,118 @@
+import time 
+from dynamics import QuadDynamics, init_state, QuadHistory, init_param_dict
+from controller import *
+from visualize_dynamics import *
+import matplotlib.pyplot as plt
+import numpy as np
+
+class L1_control():
+    def __init__(self):
+        self.adapt_gain = 100 
+        self.velrate = np.zeros((3,))
+        self.model_vel = np.zeros((3,))
+        self.ksp = 50 # TODO: what is this?
+        self.true_disturbance = np.zeros((3,))
+
+    def compute_control(self, current_vel, des_acc, dt):
+        # Calculate current velocity error
+        velerr = self.model_vel - current_vel 
+
+        # Update model 
+        # TODO: what does this do?
+        velrate = self.true_disturbance - self.ksp * velerr
+        # Add desired acceleration to velrate
+        velrate += des_acc 
+        
+        disturbance_rate = -self.adapt_gain * velerr
+
+        self.model_vel += dt *velrate 
+        # print(self.model_vel)
+        # print(self.model_vel)
+        self.true_disturbance += dt * disturbance_rate 
+        
+        
+        # self.disturbance = self.true_disturbance # TODO: add windless drag?
+        return self.true_disturbance
+    
+    def numpy_ewma_vectorized_v2(data, window):
+
+        alpha = 2 / (window + 1.0)
+        alpha_rev = 1-alpha
+        n = data.shape[0]
+
+        pows = alpha_rev**(np.arange(n+1))
+
+        scale_arr = 1/pows[:-1]
+        offset = data[0]*pows[1:]
+        pw0 = alpha*alpha_rev**(n-1)
+
+        mult = data*pw0*scale_arr
+        cumsums = mult.cumsum()
+        out = offset + cumsums*scale_arr[::-1]
+        return out
+
+def main():
+    print("start")
+    t_start = time.time()
+
+    # Set desired position
+    des_pos = np.array([0, 0, 0])
+
+    # Initialize Robot State
+    state = init_state()
+
+    # Initialize quadrotor history tracker
+    quad_hist = QuadHistory()
+
+    # Initialize visualization
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 3, 1, projection='3d')
+    ax_x_error = fig.add_subplot(2, 3, 2)
+    ax_xd_error = fig.add_subplot(2, 3, 3)
+    ax_xdd_error = fig.add_subplot(2, 3, 4)
+    ax_th_error = fig.add_subplot(2, 3, 5)
+    ax_thr_error = fig.add_subplot(2, 3, 6)
+
+    # Initialize quad dynamics
+    param_dict = init_param_dict()
+    quad_dyn = QuadDynamics(param_dict)
+    l1_control = L1_control()
+    
+
+    sim_iter = 1000
+    # Step through simulation
+    for t in range(sim_iter):
+        ax.cla()
+        
+        des_vel = np.array([0,0,0])
+        # u, des_acc, des_theta_deg = go_to_velocity(state, des_vel, param_dict)
+        des_acc = pi_velocity_control(
+            state, des_vel)
+        des_acc_1 = des_acc - l1_control.true_disturbance
+        # des_acc[2] = 0
+        l1_control.compute_control(state["xdot"],des_acc_1, param_dict["dt"])
+        # print("before", des_acc)
+        # print("estimated", est_disturb)
+        
+        # des_acc += - np.array([1, 0,0])
+        # print("after", des_acc)
+        u, des_theta_deg = go_to_acc(state, des_acc_1, param_dict)
+        # Step dynamcis and update state dict
+        state = quad_dyn.step_dynamics(state, u)
+        # update history for plotting
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"],np.copy(l1_control.model_vel), np.copy(l1_control.true_disturbance))
+
+    print("Time Elapsed:", time.time() - t_start)
+    t = sim_iter - 1
+        # # Visualize quadrotor and angle error
+    ax.cla()
+    visualize_quad_quadhist(ax, quad_hist, t)
+    visualize_error_quadhist(
+        ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])
+    plt.show()
+
+    
+
+
+if __name__ == '__main__':
+    main()
