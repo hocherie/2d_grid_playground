@@ -80,7 +80,7 @@ def pi_position_control(state, des_pos, integral_p_err=None):
     Ix = 0  # -0.005
     Py = -0.5
     Iy = 0  # 0.005
-    Pz = -1
+    Pz = -0.3
 
     [x, y, z] = state["x"]
     [x_d, y_d, z_d] = des_pos

@@ -9,7 +9,8 @@ class L1_control():
     def __init__(self):
         self.adapt_gain = 100 
         # TODO: find principled way to get cutoff frequency
-        self.a_lp = 0.006  # ~1Hz, https://www.wolframalpha.com/input/?i=arccos%28%28x%5E2%2B2x-2%29%2F%282x-2%29%29100%2F2pi+%3D+1
+        self.a_lp = 0.006  # Low Pass Filter freq~1Hz, 
+        # https://www.wolframalpha.com/input/?i=arccos%28%28x%5E2%2B2x-2%29%2F%282x-2%29%29100%2F2pi+%3D+1
         self.velrate = np.zeros((3,))
         self.model_vel = np.zeros((3,))
         self.ksp = 50 # model gain
@@ -21,7 +22,6 @@ class L1_control():
         velerr = self.model_vel - current_vel 
 
         # Update model 
-        # TODO: what does this do?
         velrate = self.true_disturbance - self.ksp * velerr
         # Add desired acceleration to velrate
         velrate += des_acc 
@@ -72,34 +72,28 @@ def main():
     quad_dyn = QuadDynamics(param_dict)
     l1_control = L1_control()
     
-
-    sim_iter = 1000
     # Step through simulation
+    sim_iter = 10000
     for t in range(sim_iter):
-        # ax.cla()
-        
-        des_vel = np.array([0,0,0])
-        # u, des_acc, des_theta_deg = go_to_velocity(state, des_vel, param_dict)
+        des_pos = np.array([10,0,0])
+        des_vel,_ = pi_position_control(state, des_pos)
         des_acc = pi_velocity_control(
             state, des_vel)
-        des_acc_1 = des_acc - l1_control.l1_out
-        # des_acc[2] = 0
-        l1_control.compute_control(state["xdot"],des_acc_1, param_dict["dt"])
-        # print("before", des_acc)
-        # print("estimated", est_disturb)
-        
-        # des_acc += - np.array([1, 0,0])
-        # print("after", des_acc)
-        u, des_theta_deg = go_to_acc(state, des_acc_1, param_dict)
-        # Step dynamcis and update state dict
+        des_acc = des_acc - l1_control.l1_out
+        l1_control.compute_control(state["xdot"], des_acc, param_dict["dt"])
+        u, des_theta_deg = go_to_acc(state, des_acc, param_dict)
+
+        # Step dynamics and update state dict
         state = quad_dyn.step_dynamics(state, u)
+
         # update history for plotting
         quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, param_dict["dt"],np.copy(l1_control.model_vel), np.copy(l1_control.l1_out))
 
     print("Time Elapsed:", time.time() - t_start)
     t = sim_iter - 1
-        # # Visualize quadrotor and angle error
-    # ax.cla()
+    
+    # Visualize quadrotor and angle error
+    ax.cla()
     visualize_quad_quadhist(ax, quad_hist, t)
     visualize_error_quadhist(
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])

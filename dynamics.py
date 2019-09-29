@@ -70,6 +70,7 @@ class QuadDynamics:
         k = self.param_dict["k"]
         L = self.param_dict["L"]
         dt = self.param_dict["dt"]
+
         # Compute angular velocity vector from angular velocities
         omega = self.thetadot2omega(state["thetadot"], state["theta"])
 
@@ -81,7 +82,7 @@ class QuadDynamics:
         omega = omega + dt * omegadot
         thetadot = self.omega2thetadot(omega, state["theta"])
         theta = state["theta"] + dt * state["thetadot"]
-        xdot = state["xdot"] + dt * a
+        xdot = state["xdot"] + dt * a 
         x = state["x"] + dt * xdot
 
         # Update state dictionary
@@ -184,7 +185,6 @@ class QuadDynamics:
 
         # Mock acceleration disturbance
         a[0] += 1
-        a[1] += -0.5
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
