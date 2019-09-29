@@ -2,7 +2,7 @@ import numpy as np
 import math 
 
 
-def dynamic_inversion(des_acc, state, param_dict):
+def dynamic_inversion(des_acc, state, param_dict, cur_roll, cur_pitch):
     """Invert dynamics. For outer loop, given v_tot, compute attitude.
     Similar to control allocator.
     TODO: do 1-1 mapping?
@@ -38,9 +38,11 @@ def dynamic_inversion(des_acc, state, param_dict):
     des_theta = [des_roll, des_pitch, des_yaw]
 
     # vertical (acc_z -> thrust)
-
+    denom_thrust = param_dict["k"] * np.cos(cur_pitch) * np.cos(cur_roll)
     thrust = (param_dict["m"] * (des_acc[2] -
-                                 param_dict["g"]))/param_dict["k"]  # T=ma/k
+                                 param_dict["g"]))/denom_thrust  # T=ma/k
+    # thrust = (param_dict["m"] * (des_acc[2] -
+    #                              param_dict["g"]))/param_dict["k"]  # T=ma/k
     max_tot_u = 400000000.0  # TODO: make in param_dict
     des_thrust_pc = thrust/max_tot_u
 
@@ -56,8 +58,11 @@ def go_to_velocity(state, des_vel, param_dict):
     return u, des_acc, des_theta_deg
 
 def go_to_acc(state,des_acc,param_dict):
-    des_theta, des_thrust = dynamic_inversion(des_acc, state, param_dict)
+    cur_roll = state["theta"][0]
+    cur_pitch = state["theta"][1]
+    des_theta, des_thrust = dynamic_inversion(des_acc, state, param_dict, cur_roll, cur_pitch)
     des_theta_deg = np.degrees(des_theta)  # for logging
+
     u = pi_attitude_control(
         state, des_theta, des_thrust, param_dict)  #
     return u, des_theta_deg

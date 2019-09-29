@@ -12,17 +12,19 @@ from mpl_toolkits import mplot3d
 
 def pos_control(des_pos, current_pos, des_vel):
     P_pos = -0.1 
+    # P_pos = 0
     fb_pos = P_pos * (current_pos - des_pos) 
     corrected_vel = des_vel + fb_pos # add feedforward 
     return corrected_vel 
 
 def vel_control(des_vel,current_vel, des_acc):
-    P_vel = -0.07 
+    P_vel = -0.07
+    # P_vel = 0 
     fb_vel = P_vel * (current_vel - des_vel)
     corrected_acc = des_acc + fb_vel
     return corrected_acc
 
-def dynamic_inversion(des_acc, cur_yaw, param_dict):
+def dynamic_inversion(des_acc, cur_yaw, param_dict, cur_pitch, cur_roll):
     """Invert dynamics. For outer loop, given a_tot, compute attitude.
     """
     # yaw = state["theta"][2]
@@ -47,8 +49,9 @@ def dynamic_inversion(des_acc, cur_yaw, param_dict):
 
     # vertical (acc_z -> thrust)
 
+    denom_thrust = param_dict["k"] * np.cos(cur_pitch) * np.cos(cur_roll)
     thrust = (param_dict["m"] * (des_acc[2] -
-                                 param_dict["g"]))/param_dict["k"]  # T=ma/k
+                                 param_dict["g"]))/denom_thrust  # T=ma/k
     max_tot_u = 400000000.0  # TODO: make in param_dict
     des_thrust_pc = thrust/max_tot_u
 
@@ -93,6 +96,8 @@ def main():
     # print("hi")
         # get desired state from minimum snap traj
         sDes = traj.desiredState(t, Ts) 
+        # sDes = np.zeros((19,))
+        # print(sDes)
         trajHist[i,:] = sDes
         des_pos = sDes[0:3]
         des_vel = sDes[3:6]
@@ -101,6 +106,7 @@ def main():
         # get current state 
         current_pos = state["x"]
         current_vel = state["xdot"]
+
 
 
         # control quadrotor 
@@ -117,27 +123,31 @@ def main():
 
     # Visualization
     is_plot = False 
-    is_animate = True 
+    is_animate = False 
 
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    plt.plot(np.arange(num_iter) * Ts, trajHist[:,3:6])
+    plt.legend(["x", "y", "z"])
+    plt.show()
 
-    if is_plot:
-        ax.plot3D(trajHist[:,0], trajHist[:,1],trajHist[:,2],'r.')
-        ax.plot3D(stateHist[:,0], stateHist[:,1],stateHist[:,2],'b.')
-        plt.show()
-        # plt.pause(0.0001)
-    if is_animate:
-        for i in range(num_iter):
-            if (i % 50) == 0:
-                print(i)
-                plt.gca()
-                ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
-                ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
-                plt.pause(0.0001)
+    # fig = plt.figure()
+    # ax = plt.axes(projection='3d')
+    # ax.set_xlabel("x")
+    # ax.set_ylabel("y")
+    # ax.set_zlabel("z")
+
+    # if is_plot:
+    #     ax.plot3D(trajHist[:,0], trajHist[:,1],trajHist[:,2],'r.')
+    #     ax.plot3D(stateHist[:,0], stateHist[:,1],stateHist[:,2],'b.')
+    #     plt.show()
+    #     # plt.pause(0.0001)
+    # if is_animate:
+    #     for i in range(num_iter):
+    #         if (i % 50) == 0:
+    #             print(i)
+    #             plt.gca()
+    #             ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
+    #             ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
+    #             plt.pause(0.0001)
     # plt.show()
 
 if __name__ == "__main__":
