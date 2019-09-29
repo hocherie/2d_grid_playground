@@ -11,14 +11,16 @@ from mpl_toolkits import mplot3d
 # TODO: make PID controller class 
 
 def pos_control(des_pos, current_pos, des_vel):
-    P_pos = 0 # TODO: check feedforward 
-    #TODO: implement feedback
-    return des_vel 
+    P_pos = -0.1 
+    fb_pos = P_pos * (current_pos - des_pos) 
+    corrected_vel = des_vel + fb_pos # add feedforward 
+    return corrected_vel 
 
 def vel_control(des_vel,current_vel, des_acc):
-    P_vel = 0 # TODO: check feedforward
-    # TODO: implement feedback
-    return des_acc
+    P_vel = -0.07 
+    fb_vel = P_vel * (current_vel - des_vel)
+    corrected_acc = des_acc + fb_vel
+    return corrected_acc
 
 def dynamic_inversion(des_acc, cur_yaw, param_dict):
     """Invert dynamics. For outer loop, given a_tot, compute attitude.
@@ -113,15 +115,29 @@ def main():
         # print(sDes)
         t += Ts
 
+    # Visualization
+    is_plot = False 
+    is_animate = True 
+
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    for i in range(num_iter):
-        if (i % 50) == 0:
-            print(i)
-            plt.gca()
-            ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
-            ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
-            plt.pause(0.0001)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+
+    if is_plot:
+        ax.plot3D(trajHist[:,0], trajHist[:,1],trajHist[:,2],'r.')
+        ax.plot3D(stateHist[:,0], stateHist[:,1],stateHist[:,2],'b.')
+        plt.show()
+        # plt.pause(0.0001)
+    if is_animate:
+        for i in range(num_iter):
+            if (i % 50) == 0:
+                print(i)
+                plt.gca()
+                ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
+                ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
+                plt.pause(0.0001)
     # plt.show()
 
 if __name__ == "__main__":
