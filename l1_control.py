@@ -95,6 +95,7 @@ def main():
         # control quadrotor
         des_vel = pos_control(des_pos, current_pos, des_vel)
         des_acc = vel_control(des_vel, current_vel, des_acc)
+        # des_acc += np.array([-1,0,0])
         des_acc = des_acc - l1_control.l1_out
         l1_control.compute_control(state["xdot"], des_acc, param_dict["dt"])
         u, des_theta_deg = go_to_acc(state, des_acc, param_dict)
@@ -114,6 +115,28 @@ def main():
     visualize_quad_quadhist(ax, quad_hist, t)
     visualize_error_quadhist(
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])
+    plt.show()
+
+    # Plot: compare t
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+
+    # if is_plot:
+    ax.plot3D(trajHist[:, 0], trajHist[:, 1], trajHist[:, 2], 'r.')
+    ax.plot3D(stateHist[:, 0], stateHist[:, 1], stateHist[:, 2], 'b.')
+    plt.show()
+
+
+    # Plot: tracking error 
+    fig = plt.figure()
+    plt.plot(np.arange(sim_iter)*Ts, trajHist[:,:3] - stateHist)
+    plt.legend(["x", "y", "z"])
+    plt.title("Tracking Error")
+    plt.xlabel("Time")
+    plt.ylabel("Error (m)")
     plt.show()
 
     
