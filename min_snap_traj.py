@@ -90,8 +90,8 @@ def main():
         t += Ts
 
     # Visualization
-    is_plot = True 
-    is_animate = False 
+    is_plot = False 
+    is_animate = True  
 
     # Plot Velocity
     plt.plot(np.arange(num_iter) * Ts, trajHist[:,3:6])
@@ -114,9 +114,14 @@ def main():
             if (i % 50) == 0:
                 print(i)
                 plt.gca()
-                ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
-                ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
+                ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.',linewidth=0.25)
+                ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.',linewidth=0.25)
+                ax.scatter(stateHist[i, 0], stateHist[i, 1],
+                          stateHist[i, 2], c='k')
                 plt.pause(0.0001)
+                ax.set_xlim([-10,10])
+                ax.set_ylim([-10,10])
+                ax.set_zlim([-5,5])
     plt.show()
 
 if __name__ == "__main__":
