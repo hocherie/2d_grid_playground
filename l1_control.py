@@ -76,7 +76,7 @@ def main():
     sim_iter = 1000
     # Step through simulation
     for t in range(sim_iter):
-        ax.cla()
+        # ax.cla()
         
         des_vel = np.array([0,0,0])
         # u, des_acc, des_theta_deg = go_to_velocity(state, des_vel, param_dict)
@@ -99,7 +99,7 @@ def main():
     print("Time Elapsed:", time.time() - t_start)
     t = sim_iter - 1
         # # Visualize quadrotor and angle error
-    ax.cla()
+    # ax.cla()
     visualize_quad_quadhist(ax, quad_hist, t)
     visualize_error_quadhist(
         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])

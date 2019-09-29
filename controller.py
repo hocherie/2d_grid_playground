@@ -98,11 +98,8 @@ def pi_position_control(state, des_pos, integral_p_err=None):
     pid_err_y = Py * p_err[1] + Iy * integral_p_err[1]
     pid_err_z = Pz * p_err[2]  # TODO: project onto attitude angle?
 
-    # TODO: implement for z vel
     des_xv = pid_err_x # * np.cos(yaw) + pid_err_y * np.sin(yaw)
     des_yv = pid_err_y #* np.sin(yaw) - pid_err_y * np.cos(yaw)
-
-    # TODO: currently, set z as constant
     des_zv = pid_err_z
 
     return np.array([des_xv, des_yv, des_zv]), integral_p_err
@@ -111,7 +108,7 @@ def pi_velocity_control(state, des_vel):
         Pxd = -1.2
         Pyd = -1.2
         Pzd = -0.5
-        
+
         [xv, yv, zv] = state["xdot"]
         [xv_d, yv_d, zv_d] = des_vel
         yaw = state["theta"][2]
