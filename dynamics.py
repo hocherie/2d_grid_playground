@@ -30,9 +30,9 @@ def init_param_dict():
     return param_dict
 
 
-def init_state():
+def init_state(x=np.array([5, 0, 10])):
     """Initialize state dictionary. """
-    state = {"x": np.array([5, 0, 10]),
+    state = {"x": x,
              "xdot": np.zeros(3,),
              "xdd": np.zeros(3,),
              "theta": np.radians(np.array([0, 0, 20])),  # ! hardcoded
