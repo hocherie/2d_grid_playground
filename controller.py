@@ -38,9 +38,11 @@ def dynamic_inversion(des_acc, state, param_dict, cur_roll, cur_pitch):
     des_theta = [des_roll, des_pitch, des_yaw]
 
     # vertical (acc_z -> thrust)
-    denom_thrust = param_dict["k"] * np.cos(cur_pitch) * np.cos(cur_roll)
-    thrust = (param_dict["m"] * (des_acc[2] -
-                                 param_dict["g"]))/denom_thrust  # T=ma/k
+    denom_thrust = param_dict["k"] 
+    acc_array = np.copy(des_acc) - np.array([0,0, param_dict["g"]])
+    acc_norm = np.linalg.norm(acc_array)
+    # thrust =
+    thrust = (param_dict["m"] * (acc_norm))/denom_thrust  # T=ma/k
     # thrust = (param_dict["m"] * (des_acc[2] -
     #                              param_dict["g"]))/param_dict["k"]  # T=ma/k
     max_tot_u = 400000000.0  # TODO: make in param_dict

@@ -22,7 +22,7 @@ def init_param_dict():
     b = 1e-7
     I = np.diag([5e-3, 5e-3, 10e-3])
     kd = 0.001
-    dt = 0.01
+    dt = 0.005
     maxrpm = 10000
     maxthrust = k*np.sum(np.array([maxrpm**2] * 4))
     param_dict = {"g": g, "m": m, "L": L, "k": k, "b": b, "I": I,

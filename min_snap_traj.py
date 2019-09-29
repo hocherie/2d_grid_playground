@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, '../Quadcopter_SimCon/Simulation')
+sys.path.insert(1, '../Quadcopter_SimCon-master/Simulation')
 from trajectory import Trajectory
 from dynamics import QuadDynamics, init_state, QuadHistory, init_param_dict
 from controller import go_to_acc
@@ -11,51 +11,19 @@ from mpl_toolkits import mplot3d
 # TODO: make PID controller class 
 
 def pos_control(des_pos, current_pos, des_vel):
-    P_pos = -0.1 
+    P_pos = -1 
     # P_pos = 0
     fb_pos = P_pos * (current_pos - des_pos) 
     corrected_vel = des_vel + fb_pos # add feedforward 
     return corrected_vel 
 
 def vel_control(des_vel,current_vel, des_acc):
-    P_vel = -0.07
+    P_vel = -5
     # P_vel = 0 
     fb_vel = P_vel * (current_vel - des_vel)
     corrected_acc = des_acc + fb_vel
     return corrected_acc
 
-def dynamic_inversion(des_acc, cur_yaw, param_dict, cur_pitch, cur_roll):
-    """Invert dynamics. For outer loop, given a_tot, compute attitude.
-    """
-    # yaw = state["theta"][2]
-    # tot_u_constant = 408750 * 4  # hover, for four motors
-    # specific_force = tot_u_constant  / param_dict["m"]
-
-    # based on http://research.sabanciuniv.edu/33398/1/ICUAS2017_Final_ZAKI_UNEL_YILDIZ.pdf (Eq. 22-24)
-    U1 = np.linalg.norm(des_acc - np.array([0, 0, param_dict["g"]]))
-    des_pitch_noyaw = np.arcsin(des_acc[0] / U1)
-    des_angle = [des_pitch_noyaw,
-                 np.arcsin(des_acc[1] / (U1 * np.cos(des_pitch_noyaw)))]
-    des_pitch = des_angle[0] * np.cos(yaw) + des_angle[1] * np.sin(yaw)
-    des_roll = des_angle[0] * np.sin(yaw) - des_angle[1] * np.cos(yaw)
-
-    # TODO: move to attitude controller?
-    des_pitch = np.clip(des_pitch, np.radians(-30), np.radians(30))
-    des_roll = np.clip(des_roll, np.radians(-30), np.radians(30))
-
-    # TODO: currently, set yaw as constant
-    des_yaw = yaw
-    des_theta = [des_roll, des_pitch, des_yaw]
-
-    # vertical (acc_z -> thrust)
-
-    denom_thrust = param_dict["k"] * np.cos(cur_pitch) * np.cos(cur_roll)
-    thrust = (param_dict["m"] * (des_acc[2] -
-                                 param_dict["g"]))/denom_thrust  # T=ma/k
-    max_tot_u = 400000000.0  # TODO: make in param_dict
-    des_thrust_pc = thrust/max_tot_u
-
-    return des_theta, des_thrust_pc
 
 def main():
     # Initialize quad dynamics
@@ -122,33 +90,34 @@ def main():
         t += Ts
 
     # Visualization
-    is_plot = False 
+    is_plot = True 
     is_animate = False 
 
+    # Plot Velocity
     plt.plot(np.arange(num_iter) * Ts, trajHist[:,3:6])
     plt.legend(["x", "y", "z"])
     plt.show()
 
-    # fig = plt.figure()
-    # ax = plt.axes(projection='3d')
-    # ax.set_xlabel("x")
-    # ax.set_ylabel("y")
-    # ax.set_zlabel("z")
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
 
-    # if is_plot:
-    #     ax.plot3D(trajHist[:,0], trajHist[:,1],trajHist[:,2],'r.')
-    #     ax.plot3D(stateHist[:,0], stateHist[:,1],stateHist[:,2],'b.')
-    #     plt.show()
-    #     # plt.pause(0.0001)
-    # if is_animate:
-    #     for i in range(num_iter):
-    #         if (i % 50) == 0:
-    #             print(i)
-    #             plt.gca()
-    #             ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
-    #             ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
-    #             plt.pause(0.0001)
-    # plt.show()
+    if is_plot:
+        ax.plot3D(trajHist[:,0], trajHist[:,1],trajHist[:,2],'r.')
+        ax.plot3D(stateHist[:,0], stateHist[:,1],stateHist[:,2],'b.')
+        plt.show()
+        # plt.pause(0.0001)
+    if is_animate:
+        for i in range(num_iter):
+            if (i % 50) == 0:
+                print(i)
+                plt.gca()
+                ax.plot3D(trajHist[:i,0], trajHist[:i,1],trajHist[:i,2],'r.')
+                ax.plot3D(stateHist[:i,0], stateHist[:i,1],stateHist[:i,2],'b.')
+                plt.pause(0.0001)
+    plt.show()
 
 if __name__ == "__main__":
     # pass
