@@ -30,12 +30,12 @@ def init_param_dict():
     return param_dict
 
 
-def init_state(x=np.array([5, 0, 10])):
+def init_state(x=np.array([0, 0, 0])):
     """Initialize state dictionary. """
     state = {"x": x,
              "xdot": np.zeros(3,),
              "xdd": np.zeros(3,),
-             "theta": np.radians(np.array([0, 0, 20])),  # ! hardcoded
+             "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
              "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
              }
     return state
@@ -73,10 +73,13 @@ class QuadDynamics:
 
         # Compute angular velocity vector from angular velocities
         omega = self.thetadot2omega(state["thetadot"], state["theta"])
+        print("omega", omega)
 
         # Compute linear and angular accelerations given input and state
         a = self.calc_acc(u, state["theta"], state["xdot"], m, g, k, kd)
+        print("a", a)
         omegadot = self.calc_ang_acc(u, omega, I, L, b, k)
+        print("omegad", omegadot)
 
         # Compute next state
         omega = omega + dt * omegadot
@@ -148,6 +151,7 @@ class QuadDynamics:
             b * (u[0]-u[1] + u[2]-u[3])
         ])
 
+        print(tau)
         return tau
 
     def calc_acc(self, u, theta, xdot, m, g, k, kd):
@@ -184,7 +188,7 @@ class QuadDynamics:
         a = gravity + 1/m * T + Fd
 
         # Mock acceleration disturbance
-        a[0] += 1
+        # a[0] += 1
         return a
 
     def calc_ang_acc(self, u, omega, I, L, b, k):
@@ -292,7 +296,7 @@ class QuadDynamics:
 
 def basic_input():
     """Return arbritrary input to test simulator"""
-    return np.power(np.array([950, 700, 700, 700]), 2)
+    return np.power(np.array([800, 700, 700, 700]), 2)
 
 
 class QuadHistory():
@@ -365,33 +369,40 @@ def main():
     integral_v_err = None
 
     # Initialize quad dynamics
-    quad_dyn = QuadDynamics()
+    quad_dyn = QuadDynamics(init_param_dict())
 
-    sim_iter = 100
+    sim_iter = 1000
     # Step through simulation
     for t in range(sim_iter):
-
-        if t * dt > 20:
-            des_pos = np.array([0, 0, 10])
-        ax.cla()
-        des_vel, integral_p_err = pi_position_control(
-            state, des_pos, integral_p_err)
-        des_thrust, des_theta, integral_v_err = pi_velocity_control(
-            state, des_vel, integral_v_err)  # attitude control
-        des_theta_deg = np.degrees(des_theta)  # for logging
-        u = pi_attitude_control(
-            state, des_theta, des_thrust, param_dict)  # attitude control
+        print(t, "------------")
+        # if t * dt > 20:
+        #     des_pos = np.array([0, 0, 10])
+        # ax.cla()
+        # des_vel, integral_p_err = pi_position_control(
+        #     state, des_pos, integral_p_err)
+        # des_thrust, des_theta, integral_v_err = pi_velocity_control(
+        #     state, des_vel, integral_v_err)  # attitude control
+        # des_theta_deg = np.degrees(des_theta)  # for logging
+        # u = pi_attitude_control(
+        #     state, des_theta, des_thrust, param_dict)  # attitude control
+        u = basic_input()
         # Step dynamcis and update state dict
         state = quad_dyn.step_dynamics(state, u)
         # update history for plotting
-        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, dt)
+        des_theta_deg = np.zeros((3,))
+        des_vel = np.zeros((3,))
+        model_vel = np.zeros((3,))
+        model_dist = np.zeros((3,))
+        dt = quad_dyn.param_dict["dt"]
+        quad_hist.update_history(state, des_theta_deg, des_vel, des_pos, dt, model_vel, model_dist)
+        print(state["x"])
 
-    for t in range(100):
-    # # Visualize quadrotor and angle error
-        ax.cla()
-        visualize_quad_quadhist(ax, quad_hist, t)
-        visualize_error_quadhist(
-            ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, dt)
+    # for t in range(10):
+    # # # Visualize quadrotor and angle error
+    #     ax.cla()
+    #     visualize_quad_quadhist(ax, quad_hist, t)
+    #     visualize_error_quadhist(
+    #         ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, dt)
 
     print("Time Elapsed:", time.time() - t_start)
 

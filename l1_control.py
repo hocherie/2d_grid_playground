@@ -12,10 +12,10 @@ class L1_control():
         # TODO: find principled way to get cutoff frequency
         self.a_lp = 0.0006  # Low Pass Filter freq~1Hz, 
         # https://www.wolframalpha.com/input/?i=arccos%28%28x%5E2%2B2x-2%29%2F%282x-2%29%29100%2F2pi+%3D+1
-        self.velrate = np.zeros((3,))
+        self.veld = np.zeros((3,)) # Change in velocity
         self.model_vel = np.zeros((3,))
         self.ksp = 50 # model gain
-        self.true_disturbance = np.zeros((3,))
+        self.disturbance = np.zeros((3,))
         self.l1_out = np.zeros((3,))
 
     def compute_control(self, current_vel, des_acc, dt):
@@ -23,15 +23,15 @@ class L1_control():
         velerr = self.model_vel - current_vel 
 
         # Update model 
-        velrate = self.true_disturbance - self.ksp * velerr
-        # Add desired acceleration to velrate
-        velrate += des_acc 
+        veld = self.disturbance - self.ksp * velerr
+        # Add desired acceleration to veld
+        veld += des_acc 
         
         disturbance_rate = -self.adapt_gain * velerr
 
-        self.model_vel += dt *velrate 
-        self.last_disturbance = np.copy(self.true_disturbance)
-        self.true_disturbance += dt * disturbance_rate 
+        self.model_vel += dt *veld 
+        self.last_disturbance = np.copy(self.disturbance)
+        self.disturbance += dt * disturbance_rate 
         
         # Apply low pass filter
         self.l1_out = self.exp_mov_avg()
@@ -40,7 +40,7 @@ class L1_control():
     def exp_mov_avg(self):
         # self.a_lp
         last_output = np.copy(self.l1_out)
-        current_input = np.copy(self.true_disturbance)
+        current_input = np.copy(self.disturbance)
 
         filtered_output = self.a_lp * \
             current_input + (1-self.a_lp) * last_output
@@ -57,14 +57,7 @@ def main():
     # Initialize quadrotor history tracker
     quad_hist = QuadHistory()
 
-    # Initialize visualization
-    fig = plt.figure()
-    ax = fig.add_subplot(2, 3, 1, projection='3d')
-    ax_x_error = fig.add_subplot(2, 3, 2)
-    ax_xd_error = fig.add_subplot(2, 3, 3)
-    ax_xdd_error = fig.add_subplot(2, 3, 4)
-    ax_th_error = fig.add_subplot(2, 3, 5)
-    ax_thr_error = fig.add_subplot(2, 3, 6)
+
 
     # Initialize quad dynamics
     param_dict = init_param_dict()
@@ -108,36 +101,72 @@ def main():
         t += Ts
 
     print("Time Elapsed:", time.time() - t_start)
-    t = sim_iter - 1
+    # t = sim_iter - 1
     
-    # Visualize quadrotor and angle error
-    ax.cla()
-    visualize_quad_quadhist(ax, quad_hist, t)
-    visualize_error_quadhist(
-        ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])
-    plt.show()
+    # # Plot Velocity
+    # plt.plot(np.arange(sim_iter) * Ts, trajHist[:, 3:6])
+
+    # plt.legend(["x", "y", "z"])
+    # np.save('trajvel', trajHist[:,3:6])
+    # plt.show()
+
+    # # Initialize visualization
+    # fig = plt.figure()
+    # ax = fig.add_subplot(2, 3, 1, projection='3d')
+    # ax_x_error = fig.add_subplot(2, 3, 2)
+    # ax_xd_error = fig.add_subplot(2, 3, 3)
+    # ax_xdd_error = fig.add_subplot(2, 3, 4)
+    # ax_th_error = fig.add_subplot(2, 3, 5)
+    # ax_thr_error = fig.add_subplot(2, 3, 6)
+    # # Visualize quadrotor and angle error
+    # ax.cla()
+    # visualize_quad_quadhist(ax, quad_hist, t)
+    # visualize_error_quadhist(
+    #     ax_x_error, ax_xd_error, ax_th_error, ax_thr_error, ax_xdd_error, quad_hist, t, param_dict["dt"])
+    # plt.show()
 
     # Plot: compare t
+    plt.style.use('fivethirtyeight')
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
 
-    # if is_plot:
-    ax.plot3D(trajHist[:, 0], trajHist[:, 1], trajHist[:, 2], 'r.')
-    ax.plot3D(stateHist[:, 0], stateHist[:, 1], stateHist[:, 2], 'b.')
-    plt.show()
+    for i in range(sim_iter):
+        if (i % 50) == 0:
+            print(i)
+            plt.gca()
+            ax.plot3D(trajHist[:i, 0], trajHist[:i, 1],
+                        trajHist[:i, 2], 'r.', linewidth=0.01)
+            ax.plot3D(stateHist[:i, 0], stateHist[:i, 1],
+                        stateHist[:i, 2], 'b.', linewidth=0.01)
+            # ax.scatter(stateHist[i, 0], stateHist[i, 1],
+            #             stateHist[i, 2], c='k')
+            plt.pause(0.0001)
+            ax.set_xlim([-10, 10])
+            ax.set_ylim([-10, 10])
+            ax.set_zlim([-5, 5])
+            ax.legend(["Desired", "Actual"])
+    # # if is_plot:
+    
+    # ax.plot3D(trajHist[:, 0], trajHist[:, 1], trajHist[:, 2], 'r.')
+    # ax.plot3D(stateHist[:, 0], stateHist[:, 1], stateHist[:, 2], 'b.')
+    # ax.legend(["Desired", "Actual"])
+    # plt.show()
 
 
-    # Plot: tracking error 
-    fig = plt.figure()
-    plt.plot(np.arange(sim_iter)*Ts, trajHist[:,:3] - stateHist)
-    plt.legend(["x", "y", "z"])
-    plt.title("Tracking Error")
-    plt.xlabel("Time")
-    plt.ylabel("Error (m)")
-    plt.show()
+    # # Plot: tracking error 
+    # track_err = trajHist[:, :3] - stateHist
+    # print(track_err)
+    # np.save('l1_minsnap', track_err)
+    # fig = plt.figure()
+    # plt.plot(np.arange(sim_iter)*Ts, track_err)
+    # plt.legend(["x", "y", "z"])
+    # plt.title("Tracking Error")
+    # plt.xlabel("Time")
+    # plt.ylabel("Error (m)")
+    # plt.show()
 
     
 
