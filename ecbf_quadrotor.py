@@ -156,8 +156,8 @@ def main():
     state_hist = []
     state_hist.append(state["x"])
 
-    new_obs = np.array([[0], [1]])
-    for tt in range(100000):
+    new_obs = np.array([[0], [0]])
+    for tt in range(5000):
         # ecbf.plot_h()
         u_hat_acc = ecbf.compute_safe_control(obs=new_obs)
         u_hat_acc = np.ndarray.flatten(np.array(np.vstack((u_hat_acc,np.zeros((1,1))))))  # acceleration
@@ -167,23 +167,35 @@ def main():
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"])
+        ## Animate
         if(tt % 100 == 0):
             print(tt)
-            plt.cla()
-            state_hist_plot = np.array(state_hist)
-            nom_cont = ecbf.compute_nom_control()
-            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      u_hat_acc[0]],
-                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
-            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      nom_cont[0]],
-                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
+        #     plt.cla()
+        #     state_hist_plot = np.array(state_hist)
+        #     nom_cont = ecbf.compute_nom_control()
+        #     plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+        #               u_hat_acc[0]],
+        #              [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
+        #     plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+        #               nom_cont[0]],
+        #              [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
 
-            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
-            plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
+        #     plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
+        #     plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+        #     plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
 
-            ecbf.plot_h(new_obs)
+        #     ecbf.plot_h(new_obs)
+    
+    
+    # Plot history
+    state_hist_plot = np.array(state_hist)
+    plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1], 'k')
+    plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+    plt.plot(state_hist_plot[-1, 0],
+                state_hist_plot[-1, 1], '*k')  # current
+
+    ecbf.plot_h(new_obs)
+    plt.show()
 
 
 
