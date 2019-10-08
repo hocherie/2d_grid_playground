@@ -18,6 +18,14 @@ class ECBF_control():
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.use_safe = True
+        # noise terms
+        self.noise_x = np.zeros((3,))
+
+    def add_state_noise(self, variance):
+        # Apply random walk noise
+        self.noise_x += (np.random.rand(3) - 0.5) * variance
+        self.state["x"] += self.noise_x  # position
+        # TODO: do for velocity too?
 
     def compute_h(self, obs=np.array([[0], [0]]).T):
         rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
@@ -107,7 +115,7 @@ def plot_h(obs):
     plt.ylabel("Y")
     plt.pause(0.00000001)
 
-def run_trial(state, obs_loc,goal, num_it):
+def run_trial(state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
     dyn = QuadDynamics()
@@ -126,18 +134,17 @@ def run_trial(state, obs_loc,goal, num_it):
             state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
+        ecbf.add_state_noise(variance) # Add noise here
         state_hist.append(state["x"])
         h_hist[tt] = ecbf.compute_h(new_obs)
 
-        # if(tt % 500 == 0):
-        #     print(tt)
     return np.array(state_hist), h_hist
 
 def main():
 
     #! Experiment Variables
-    num_it = 5000
-    num_trials = 10
+    num_it = 1000
+    num_trials = 3
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_trials))
@@ -147,10 +154,14 @@ def main():
     for trial in range(num_trials):
         #! Randomize trial variables. CHANGE!
         print("Trial: ",trial)
-        x_start_tr = np.random.rand() 
-        y_start_tr = np.random.rand() - 4
-        goal_x = np.random.rand() * 5 - 2.5
-        goal_y = np.random.rand() + 10
+        # x_start_tr = np.random.rand()  # for randomizing start and goal
+        # y_start_tr = np.random.rand() - 4
+        # goal_x = np.random.rand() * 5 - 2.5
+        # goal_y = np.random.rand() + 10
+        x_start_tr = 30 #! Mock, test near obstacle
+        y_start_tr = -4
+        goal_x = 30
+        goal_y = 10
         goal = np.array([[goal_x], [goal_y]])
         state = {"x": np.array([x_start_tr, y_start_tr, 10]),
                     "xdot": np.zeros(3,),
@@ -159,8 +170,8 @@ def main():
                     }
         obs_loc = [0,0]
 
-
-        state_hist, h_hist = run_trial(state, obs_loc, goal, num_it)
+    
+        state_hist, h_hist = run_trial(state, obs_loc, goal, num_it,variance=0.0001*trial) #! use 0.01 * trial num as variance for now 
         # Add trial results to list
         state_hist_x_trials[:, trial] = state_hist[:, 0]
         state_hist_y_trials[:, trial] = state_hist[:, 1]
@@ -171,11 +182,14 @@ def main():
     plt.xlabel("Time")
     plt.ylabel("h")
     plt.title("h")
+    plt.legend(["1","2","3"])
+    plt.ylim((-5,5)) # highlight if violate safety
 
     # Plot vehicle trajectories
     plt.figure()
     plt.plot(state_hist_x_trials, state_hist_y_trials)
     plot_h(np.atleast_2d(obs_loc).T)
+    
     plt.show()
 
 
