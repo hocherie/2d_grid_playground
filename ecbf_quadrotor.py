@@ -114,6 +114,7 @@ def run_trial(state, obs_loc,goal, num_it):
     ecbf = ECBF_control(state=state,goal=goal)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
+    h_hist = np.zeros((num_it))
 
     # Loop through iterations
     for tt in range(num_it):
@@ -126,20 +127,22 @@ def run_trial(state, obs_loc,goal, num_it):
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"])
+        h_hist[tt] = ecbf.compute_h(new_obs)
 
         # if(tt % 500 == 0):
         #     print(tt)
-    return np.array(state_hist)
+    return np.array(state_hist), h_hist
 
 def main():
 
     #! Experiment Variables
     num_it = 5000
-    num_trials = 3
+    num_trials = 10
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_trials))
     state_hist_y_trials = np.zeros((num_it, num_trials))
+    h_trials = np.zeros((num_it, num_trials)) # metric
 
     for trial in range(num_trials):
         #! Randomize trial variables. CHANGE!
@@ -157,12 +160,20 @@ def main():
         obs_loc = [0,0]
 
 
-        state_hist = run_trial(state, obs_loc, goal, num_it)
+        state_hist, h_hist = run_trial(state, obs_loc, goal, num_it)
         # Add trial results to list
         state_hist_x_trials[:, trial] = state_hist[:, 0]
         state_hist_y_trials[:, trial] = state_hist[:, 1]
+        h_trials[:,trial] = h_hist
 
-    # Plot history
+    # Plot metrics over time
+    plt.plot(h_trials)
+    plt.xlabel("Time")
+    plt.ylabel("h")
+    plt.title("h")
+
+    # Plot vehicle trajectories
+    plt.figure()
     plt.plot(state_hist_x_trials, state_hist_y_trials)
     plot_h(np.atleast_2d(obs_loc).T)
     plt.show()
