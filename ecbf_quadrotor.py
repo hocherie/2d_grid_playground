@@ -8,24 +8,6 @@ from cvxopt import solvers
 a = 1
 b = 1
 safety_dist = 1
-class SimpleDynamics():
-    def __init__(self):
-        ## State space
-        r = np.array([np.array([1,-4])]).T # position
-        rd = np.array([np.array([0, 0])]).T  # velocity
-        self.state = {"r":r, "rd":rd}
-        ## Params
-        self.dt = 10e-3
-
-        # self.u = zeros(2,1) # acceleration, control input
-
-    def step(self, u):
-        # rdd = self.u
-        rd = self.state["rd"] + self.dt * u - self.state["rd"] * 0.02
-        r = self.state["r"] + self.dt * self.state["rd"]
-
-        self.state["rd"] = rd
-        self.state["r"]  = r
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[0], [10]])):
@@ -40,7 +22,6 @@ class ECBF_control():
         # pass
 
     def plot_h(self, obs):
-        # obs = np.array([0,1]) #! mock
 
         plot_x = np.arange(-10, 10, 0.1)
         plot_y = np.arange(-10, 10, 0.1)
@@ -141,60 +122,80 @@ def h_func(r1, r2, a, b, safety_dist):
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
+def plot_h(obs):
 
-def main():
-    # pass
-    # dyn = SimpleDynamics()
-    state = {"x": np.array([1, -4, 10]),
-                "xdot": np.zeros(3,),
-                "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
-                "thetadot": np.radians(np.array([0, 0, 0]))  # ! hardcoded
-                }
+    plot_x = np.arange(-10, 10, 0.1)
+    plot_y = np.arange(-10, 10, 0.1)
+    xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
+    z = h_func(xx - obs[0], yy - obs[1], a, b, safety_dist) > 0
+    h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1])
+    # h = plt.contourf(plot_x, plot_y, z)
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    proxy = [plt.Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0])
+                for pc in h.collections]
+    # plt.legend(proxy, ["Unsafe: range(-1 to 0)","Safe: range(0 to 1)"])
+    # plt.legend()
+    plt.pause(0.00000001)
+
+def run_trial(state, obs_loc,goal, num_it):
+    """ Run 1 trial"""
+    # Initialize necessary classes
     dyn = QuadDynamics()
-    ecbf = ECBF_control(state)
-
+    ecbf = ECBF_control(state=state,goal=goal)
     state_hist = []
-    state_hist.append(state["x"])
+    new_obs = np.atleast_2d(obs_loc).T
 
-    new_obs = np.array([[0], [0]])
-    for tt in range(5000):
-        # ecbf.plot_h()
+    # Loop through iterations
+    for tt in range(num_it):
         u_hat_acc = ecbf.compute_safe_control(obs=new_obs)
-        u_hat_acc = np.ndarray.flatten(np.array(np.vstack((u_hat_acc,np.zeros((1,1))))))  # acceleration
+        u_hat_acc = np.ndarray.flatten(
+            np.array(np.vstack((u_hat_acc, np.zeros((1, 1))))))  # acceleration
         assert(u_hat_acc.shape == (3,))
-        u_motor = go_to_acceleration(state, u_hat_acc, dyn.param_dict) # desired motor rate ^2
-
+        u_motor = go_to_acceleration(
+            state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"])
-        ## Animate
-        if(tt % 100 == 0):
-            print(tt)
-        #     plt.cla()
-        #     state_hist_plot = np.array(state_hist)
-        #     nom_cont = ecbf.compute_nom_control()
-        #     plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-        #               u_hat_acc[0]],
-        #              [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
-        #     plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-        #               nom_cont[0]],
-        #              [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
 
-        #     plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
-        #     plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-        #     plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
+        # if(tt % 500 == 0):
+        #     print(tt)
+    return np.array(state_hist)
 
-        #     ecbf.plot_h(new_obs)
-    
-    
-    # Plot history
-    state_hist_plot = np.array(state_hist)
-    plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1], 'k')
-    plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-    plt.plot(state_hist_plot[-1, 0],
-                state_hist_plot[-1, 1], '*k')  # current
+def main():
 
-    ecbf.plot_h(new_obs)
+    #! Experiment Variables
+    num_it = 5000
+    num_trials = 10 
+
+    # Initialize result arrays
+    state_hist_x_trials = np.zeros((num_it, num_trials))
+    state_hist_y_trials = np.zeros((num_it, num_trials))
+
+    for trial in range(num_trials):
+        #! Randomize trial variables. CHANGE!
+        print("Trial: ",trial)
+        x_start_tr = np.random.rand() 
+        y_start_tr = np.random.rand() - 4
+        goal_x = np.random.rand() * 5 - 2.5
+        goal_y = np.random.rand() + 10
+        goal = np.array([[goal_x], [goal_y]])
+        state = {"x": np.array([x_start_tr, y_start_tr, 10]),
+                    "xdot": np.zeros(3,),
+                    "theta": np.radians(np.array([0, 0, 0])), 
+                    "thetadot": np.radians(np.array([0, 0, 0]))  
+                    }
+        obs_loc = [0,0]
+
+
+        state_hist = run_trial(state, obs_loc, goal, num_it)
+        # Add trial results to list
+        state_hist_x_trials[:, trial] = state_hist[:, 0]
+        state_hist_y_trials[:, trial] = state_hist[:, 1]
+
+    # # Plot history
+    plt.plot(state_hist_x_trials, state_hist_y_trials)
+    plot_h(np.atleast_2d(obs_loc).T)
     plt.show()
 
 
