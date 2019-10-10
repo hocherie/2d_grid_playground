@@ -81,7 +81,10 @@ class ECBF_control():
             solvers.options['show_progress'] = False
             sol = solvers.qp(P,q,G, h, verbose=False) # get dictionary for solution
 
+
             optimized_u = sol['x']
+            np.random.seed()
+            optimized_u += np.random.random()*np.linalg.norm(optimized_u)*.1
 
         else:
             optimized_u = self.compute_nom_control()
@@ -154,14 +157,14 @@ def main():
     for trial in range(num_trials):
         #! Randomize trial variables. CHANGE!
         print("Trial: ",trial)
-        # x_start_tr = np.random.rand()  # for randomizing start and goal
-        # y_start_tr = np.random.rand() - 4
-        # goal_x = np.random.rand() * 5 - 2.5
-        # goal_y = np.random.rand() + 10
-        x_start_tr = 30 #! Mock, test near obstacle
-        y_start_tr = -4
-        goal_x = 30
-        goal_y = 10
+        x_start_tr = np.random.rand()  # for randomizing start and goal
+        y_start_tr = np.random.rand() - 4
+        goal_x = np.random.rand() * 5 - 2.5
+        goal_y = np.random.rand() + 10
+        # x_start_tr = 30 #! Mock, test near obstacle
+        # y_start_tr = -4
+        # goal_x = 30
+        # goal_y = 10
         goal = np.array([[goal_x], [goal_y]])
         state = {"x": np.array([x_start_tr, y_start_tr, 10]),
                     "xdot": np.zeros(3,),
