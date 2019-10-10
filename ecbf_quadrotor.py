@@ -127,6 +127,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
 
+    noise_x = np.zeros(3) # keeps track of noise for random walk
+
     # Loop through iterations
     for tt in range(num_it):
         u_hat_acc = ecbf.compute_safe_control(obs=new_obs)
@@ -136,8 +138,10 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         u_motor = go_to_acceleration(
             state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
         state = dyn.step_dynamics(state, u_motor)
+        noise_x += (np.random.rand(3) - 0.5) * variance # add gaussian to random walk
+        state["x"] += noise_x  # add noise to position position
         ecbf.state = state
-        ecbf.add_state_noise(variance) # Add noise here
+        # ecbf.add_state_noise(variance) # Add noise here
         state_hist.append(state["x"])
         h_hist[tt] = ecbf.compute_h(new_obs)
 
