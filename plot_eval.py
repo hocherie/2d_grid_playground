@@ -14,6 +14,7 @@ plt.fill_between(range(num_it), h_trial_mean_list[:, 1] -
 plt.fill_between(range(num_it), h_trial_mean_list[:, 0] -
                  h_trial_var_list[:, 0], h_trial_mean_list[:, 0]+h_trial_var_list[:, 0], color='blue', alpha=0.2)
 plt.plot(range(num_it), h_trial_mean_list)
+plt.plot(range(num_it), np.zeros_like(range(num_it)), 'k--')
 plt.xlabel("Time")
 plt.ylabel("h")
 plt.title("h")
