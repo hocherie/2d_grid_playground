@@ -150,9 +150,9 @@ def run_trial(state, obs_loc,goal, num_it, variance):
 def main():
 
     #! Experiment Variables
-    num_it = 1000
+    num_it = 5000
     num_variance = 3
-    num_trials = 3
+    num_trials = 10
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_variance))
@@ -163,20 +163,20 @@ def main():
 
 
     for variance_i in range(num_variance):
-        h_trial = np.zeros((num_it, num_variance))
+        h_trial = np.zeros((num_it, num_trials))
         state_hist_x_trial = np.zeros((num_it, num_trials))
         state_hist_y_trial = np.zeros((num_it, num_trials))
         for trial in range(num_trials):
             #! Randomize trial variables. CHANGE!
             print("Trial: ",trial)
-            x_start_tr = np.random.rand()  # for randomizing start and goal
-            y_start_tr = np.random.rand() - 4
-            goal_x = np.random.rand() * 5 - 2.5
-            goal_y = np.random.rand() + 10
-            # x_start_tr = 30 #! Mock, test near obstacle
-            # y_start_tr = -4
-            # goal_x = 30
-            # goal_y = 10
+            # x_start_tr = np.random.rand()  # for randomizing start and goal
+            # y_start_tr = np.random.rand() - 4
+            # goal_x = np.random.rand() * 5 - 2.5
+            # goal_y = np.random.rand() + 10
+            x_start_tr = 0.5 #! Mock, test near obstacle
+            y_start_tr = -4
+            goal_x = 0.5
+            goal_y = 10
             goal = np.array([[goal_x], [goal_y]])
             state = {"x": np.array([x_start_tr, y_start_tr, 10]),
                         "xdot": np.zeros(3,),
@@ -204,26 +204,28 @@ def main():
         h_trial_mean_list[:, variance_i] = np.copy(h_trial_mean)
         h_trial_var_list[:, variance_i] = np.copy(h_trial_var)
 
+    np.save("h_trial_mean_list", h_trial_mean_list)
+    np.save("h_trial_var_list", h_trial_var_list)
     # Plot metrics over time
-    plt.plot(range(num_it), h_trial_mean_list)
-    plt.fill_between(range(num_it), h_trial_mean_list[:,0] -
-                     h_trial_var_list[:, 0], h_trial_mean_list[:, 0]+h_trial_var_list[:, 0], color='blue', alpha=0.2)
-    plt.fill_between(range(num_it), h_trial_mean_list[:, 1] -
-        h_trial_var_list[:, 1], h_trial_mean_list[:, 1]+h_trial_var_list[:, 1], color='orange', alpha=0.2)
-    plt.fill_between(range(num_it), h_trial_mean_list[:, 2] -
-                     h_trial_var_list[:, 2], h_trial_mean_list[:, 2]+h_trial_var_list[:, 2], color='green', alpha=0.2)
-    plt.xlabel("Time")
-    plt.ylabel("h")
-    plt.title("h")
-    plt.legend(["1","2","3"])
-    plt.ylim((-5,5)) # highlight if violate safety
+    # plt.plot(range(num_it), h_trial_mean_list)
+    # plt.fill_between(range(num_it), h_trial_mean_list[:,0] -
+    #                  h_trial_var_list[:, 0], h_trial_mean_list[:, 0]+h_trial_var_list[:, 0], color='blue', alpha=0.2)
+    # plt.fill_between(range(num_it), h_trial_mean_list[:, 1] -
+    #     h_trial_var_list[:, 1], h_trial_mean_list[:, 1]+h_trial_var_list[:, 1], color='orange', alpha=0.2)
+    # plt.fill_between(range(num_it), h_trial_mean_list[:, 2] -
+    #                  h_trial_var_list[:, 2], h_trial_mean_list[:, 2]+h_trial_var_list[:, 2], color='green', alpha=0.2)
+    # plt.xlabel("Time")
+    # plt.ylabel("h")
+    # plt.title("h")
+    # plt.legend(["1","2","3"])
+    # plt.ylim((-5,5)) # highlight if violate safety
 
-    # Plot vehicle trajectories
-    plt.figure()
-    plt.plot(state_hist_x_trials, state_hist_y_trials)
-    plot_h(np.atleast_2d(obs_loc).T)
+    # # Plot vehicle trajectories
+    # plt.figure()
+    # plt.plot(state_hist_x_trials, state_hist_y_trials)
+    # plot_h(np.atleast_2d(obs_loc).T)
     
-    plt.show()
+    # plt.show()
 
 
 
