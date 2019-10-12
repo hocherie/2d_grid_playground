@@ -7,14 +7,14 @@ from cvxopt import solvers
 
 a = 1
 b = 1
-safety_dist = 1 # TODO: change
+safety_dist = 0.25 # TODO: change
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[0], [10]])):
         self.state = state
         self.shape_dict = {}
-        Kp = 3
-        Kd = 4
+        Kp = 1
+        Kd = 10
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.use_safe = True
@@ -27,8 +27,11 @@ class ECBF_control():
         self.state["x"] += self.noise_x  # position
         # TODO: do for velocity too?
 
-    def compute_h(self, obs=np.array([[0], [0]]).T):
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+    def compute_h(self, obs=np.array([[0], [0]]).T, state_x=None):
+        if state_x is None:
+            rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+        else:
+            rel_r = np.atleast_2d(state_x[:2]).T - obs
         # TODO: a, safety_dist, obs, b
         hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
         return hr
@@ -109,50 +112,63 @@ def h_func(r1, r2, a, b, safety_dist):
 
 def plot_h(obs):
 
-    plot_x = np.arange(-10, 10, 0.1)
-    plot_y = np.arange(-10, 10, 0.1)
+    plot_x = np.arange(-5, 5, 0.01)
+    plot_y = np.arange(-5, 5, 0.01)
     xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
     z = h_func(xx - obs[0], yy - obs[1], a, b, safety_dist) > 0
     h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.pause(0.00000001)
+    # plt.pause(0.00000001)
 
-def run_trial(state, obs_loc,goal, num_it, variance):
+def run_trial(start_state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
     dyn = QuadDynamics()
-    ecbf = ECBF_control(state=state,goal=goal)
+    ecbf = ECBF_control(state=start_state,goal=goal)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
 
-    noise_x = np.zeros(3) # keeps track of noise for random walk
+    random_walk_noise = np.zeros(3) # keeps track of noise for random walk
+    noisy_state = start_state  # start noisy state as given state
+    true_state = start_state  # start true state as given state
 
     # Loop through iterations
     for tt in range(num_it):
-        u_hat_acc = ecbf.compute_safe_control(obs=new_obs)
+        # accumulate gaussian noise to make random walk noise (zero-mean)
+        random_walk_noise += np.random.normal(loc=0, scale=variance)
+
+        # get safe control acc (use noisy state)
+        u_hat_acc = ecbf.compute_safe_control(obs=new_obs) 
         u_hat_acc = np.ndarray.flatten(
-            np.array(np.vstack((u_hat_acc, np.zeros((1, 1))))))  # acceleration
+            np.array(np.vstack((u_hat_acc, np.zeros((1, 1))))))  # add zero acceleration to z
         assert(u_hat_acc.shape == (3,))
+
+        # Get final motor speed for dynamics (use noisy state)
         u_motor = go_to_acceleration(
-            state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
-        state = dyn.step_dynamics(state, u_motor)
-        noise_x += (np.random.rand(3) - 0.5) * variance # add gaussian to random walk
-        state["x"] += noise_x  # add noise to position position
-        ecbf.state = state
-        # ecbf.add_state_noise(variance) # Add noise here
-        state_hist.append(state["x"]-noise_x) # append true state
-        h_hist[tt] = ecbf.compute_h(new_obs)
+            noisy_state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
+        
+        # Get new true state with u_motor (use true state as dynamics is not based on fake data)
+        true_state = dyn.step_dynamics(true_state, u_motor)
+        
+        # Update noisy state
+        noisy_state["x"] = true_state["x"] + random_walk_noise
+        assert(noisy_state["x"].shape == (3,))
+        ecbf.state = noisy_state # use noisy state for ecbf control
+
+        # Append true state and true h for plotting
+        state_hist.append(true_state["x"])  # append true state
+        h_hist[tt] = ecbf.compute_h(new_obs, state_x=true_state["x"])
 
     return np.array(state_hist), h_hist
 
 def main():
 
     #! Experiment Variables
-    num_it = 5000
-    num_variance = 3
-    num_trials = 10
+    num_it = 2000
+    num_variance = 1
+    num_trials = 1
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_variance))
@@ -162,70 +178,67 @@ def main():
     h_trial_var_list = np.zeros((num_it, num_variance))
 
 
-    for variance_i in range(num_variance):
-        h_trial = np.zeros((num_it, num_trials))
-        state_hist_x_trial = np.zeros((num_it, num_trials))
-        state_hist_y_trial = np.zeros((num_it, num_trials))
-        for trial in range(num_trials):
-            #! Randomize trial variables. CHANGE!
-            print("Trial: ",trial)
-            # x_start_tr = np.random.rand()  # for randomizing start and goal
-            # y_start_tr = np.random.rand() - 4
-            # goal_x = np.random.rand() * 5 - 2.5
-            # goal_y = np.random.rand() + 10
-            x_start_tr = 0.5 #! Mock, test near obstacle
-            y_start_tr = -4
-            goal_x = 0.5
-            goal_y = 10
-            goal = np.array([[goal_x], [goal_y]])
-            state = {"x": np.array([x_start_tr, y_start_tr, 10]),
-                        "xdot": np.zeros(3,),
-                        "theta": np.radians(np.array([0, 0, 0])), 
-                        "thetadot": np.radians(np.array([0, 0, 0]))  
-                        }
-            obs_loc = [0,0]
+    # for variance_i in range(num_variance):
+    h_trial = np.zeros((num_it, num_trials))
+    state_hist_x_trial = np.zeros((num_it, num_trials))
+    state_hist_y_trial = np.zeros((num_it, num_trials))
+    r_start_list = np.zeros((2,num_trials))
+    r_end_list = np.zeros((2, num_trials))
+    for trial in range(num_trials):
+        #! Randomize trial variables. CHANGE!
+        print("Trial: ",trial)
+        start_x_list = [1.5, 1.5, -1, -2, -4, 2.6]
+        start_y_list = [4, -3.8, -3, 4.7, -2, 0.8]
+        goal_x_list = [-2, 1.5, 0, 0.6, 2.7, -3.9]
+        goal_y_list = [-4, 4.5, 4.5, -3.9, 0.5, -0.6]
+        # x_start_tr = np.random.rand()*4 - 2  # for randomizing start and goal
+        # y_start_tr = np.random.rand() - 4
+        # goal_x = np.random.rand() * 4 - 2
+        # goal_y = np.random.rand() + 4
+        x_start_tr = start_x_list[trial]
+        y_start_tr = start_y_list[trial]
+        goal_x = goal_x_list[trial]
+        goal_y = goal_y_list[trial]
+        # x_start_tr = 0.5 #! Mock, test near obstacle
+        # y_start_tr = -4
+        # goal_x = 0.5
+        # goal_y = 10
+        goal = np.array([[goal_x], [goal_y]])
+        state = {"x": np.array([x_start_tr, y_start_tr, 10]),
+                    "xdot": np.zeros(3,),
+                    "theta": np.radians(np.array([0, 0, 0])), 
+                    "thetadot": np.radians(np.array([0, 0, 0]))  
+                    }
+        obs_loc = [0,0]
 
-            # ! use 0.0001 * trial num as variance for now
-            state_hist, h_hist = run_trial(
-                state, obs_loc, goal, num_it, variance=0.0001*variance_i)
-            # Add trial results to list
-            state_hist_x_trial[:, trial] = state_hist[:, 0]
-            state_hist_y_trial[:, trial] = state_hist[:, 1]
-            h_trial[:,trial] = h_hist
+        #! hardcoded variance
+        state_hist, h_hist = run_trial(
+            state, obs_loc, goal, num_it, variance=0.00003)
+        # Add trial results to list
+        state_hist_x_trial[:, trial] = state_hist[:, 0]
+        state_hist_y_trial[:, trial] = state_hist[:, 1]
+        h_trial[:, trial] = h_hist
 
-        # Calculate mean and variance for all trials
-        h_trial_mean = np.mean(h_trial, 1)
-        # print(h_trial_mean.shape)
-        # assert(h_trial_mean.shape == (num_it, 1))
-        h_trial_var = np.std(h_trial, 1)
-
-        # Assign mean/variance trial to variance list
-        
-        h_trial_mean_list[:, variance_i] = np.copy(h_trial_mean)
-        h_trial_var_list[:, variance_i] = np.copy(h_trial_var)
-
-    np.save("h_trial_mean_list", h_trial_mean_list)
-    np.save("h_trial_var_list", h_trial_var_list)
-    # Plot metrics over time
-    # plt.plot(range(num_it), h_trial_mean_list)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:,0] -
-    #                  h_trial_var_list[:, 0], h_trial_mean_list[:, 0]+h_trial_var_list[:, 0], color='blue', alpha=0.2)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:, 1] -
-    #     h_trial_var_list[:, 1], h_trial_mean_list[:, 1]+h_trial_var_list[:, 1], color='orange', alpha=0.2)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:, 2] -
-    #                  h_trial_var_list[:, 2], h_trial_mean_list[:, 2]+h_trial_var_list[:, 2], color='green', alpha=0.2)
-    # plt.xlabel("Time")
-    # plt.ylabel("h")
-    # plt.title("h")
-    # plt.legend(["1","2","3"])
-    # plt.ylim((-5,5)) # highlight if violate safety
-
-    # # Plot vehicle trajectories
-    # plt.figure()
-    # plt.plot(state_hist_x_trials, state_hist_y_trials)
-    # plot_h(np.atleast_2d(obs_loc).T)
+    np.save("state_hist_x_trial_noise", state_hist_x_trial)
+    np.save("state_hist_y_trial_noise", state_hist_y_trial)
+    # Plot robot trajectories
+    plt.figure()
     
-    # plt.show()
+    # plt.plot(state_hist_x_trial, state_hist_y_trial)
+    plot_h(np.atleast_2d(obs_loc).T)  # plot safe set
+    plt.scatter(state_hist_x_trial, state_hist_y_trial, c=h_trial < 0, s=1)
+    # print(state_hist_x_trial.shape)
+
+    
+
+    # plt.figure()
+    # plt.scatter(range(len(h_trial)), h_trial, c=h_trial<0)
+    # plt.plot(np.zeros_like(h_trial),'k--')
+    plt.show()
+
+    
+
+
 
 
 
