@@ -129,6 +129,8 @@ def run_trial(start_state, obs_loc,goal, num_it, variance):
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
+    u_safe = np.zeros((num_it, 2))
+    u_nom = np.zeros((num_it, 2))
 
     random_walk_noise = np.zeros(3) # keeps track of noise for random walk
     noisy_state = start_state  # start noisy state as given state
@@ -160,15 +162,18 @@ def run_trial(start_state, obs_loc,goal, num_it, variance):
         # Append true state and true h for plotting
         state_hist.append(true_state["x"])  # append true state
         h_hist[tt] = ecbf.compute_h(new_obs, state_x=true_state["x"])
+        u_safe[tt,:] = u_hat_acc[:-1]
+        u_nom_acc = ecbf.compute_nom_control()
+        u_nom[tt, :] = u_nom_acc.flatten()
 
-    return np.array(state_hist), h_hist
+    return np.array(state_hist), h_hist, u_nom, u_safe
 
 def main():
 
     #! Experiment Variables
-    num_it = 2000
+    num_it = 5000
     num_variance = 1
-    num_trials = 1
+    num_trials = 6
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_variance))
@@ -177,7 +182,10 @@ def main():
     h_trial_mean_list = np.zeros((num_it, num_variance))
     h_trial_var_list = np.zeros((num_it, num_variance))
 
-
+    u_trial_nom_x_nonoise = np.zeros((num_it, num_trials))
+    u_trial_nom_y_nonoise = np.zeros((num_it, num_trials))
+    u_trial_safe_x_nonoise = np.zeros((num_it, num_trials))
+    u_trial_safe_y_nonoise = np.zeros((num_it, num_trials))
     # for variance_i in range(num_variance):
     h_trial = np.zeros((num_it, num_trials))
     state_hist_x_trial = np.zeros((num_it, num_trials))
@@ -188,7 +196,7 @@ def main():
         #! Randomize trial variables. CHANGE!
         print("Trial: ",trial)
         start_x_list = [1.5, 1.5, -1, -2, -4, 2.6]
-        start_y_list = [4, -3.8, -3, 4.7, -2, 0.8]
+        start_y_list = [4, -2, -3, 4.7, -2, 0.8]
         goal_x_list = [-2, 1.5, 0, 0.6, 2.7, -3.9]
         goal_y_list = [-4, 4.5, 4.5, -3.9, 0.5, -0.6]
         # x_start_tr = np.random.rand()*4 - 2  # for randomizing start and goal
@@ -212,29 +220,44 @@ def main():
         obs_loc = [0,0]
 
         #! hardcoded variance
-        state_hist, h_hist = run_trial(
-            state, obs_loc, goal, num_it, variance=0.00003)
+        state_hist, h_hist, u_nom, u_safe = run_trial(
+            state, obs_loc, goal, num_it, variance=0.0)
         # Add trial results to list
         state_hist_x_trial[:, trial] = state_hist[:, 0]
         state_hist_y_trial[:, trial] = state_hist[:, 1]
+        print("u_nom.shape", u_nom.shape)
+        u_trial_nom_x_nonoise[:, trial] = u_nom[:,0]
+        u_trial_nom_y_nonoise[:,trial] = u_nom[:,1]
+        u_trial_safe_x_nonoise[:, trial] = u_safe[:,0]
+        u_trial_safe_y_nonoise[:, trial] = u_safe[:,1]
         h_trial[:, trial] = h_hist
 
-    np.save("state_hist_x_trial_noise", state_hist_x_trial)
-    np.save("state_hist_y_trial_noise", state_hist_y_trial)
-    # Plot robot trajectories
-    plt.figure()
+    np.save("state_hist_x_trial_nonoise", state_hist_x_trial)
+    np.save("state_hist_y_trial_nonoise", state_hist_y_trial)
+    np.save("u_trial_nom_x_nonoise", u_trial_nom_x_nonoise)
+    np.save("u_trial_nom_y_nonoise", u_trial_nom_y_nonoise)
+    np.save("u_trial_safe_x_nonoise", u_trial_safe_x_nonoise)
+    np.save("u_trial_safe_y_nonoise", u_trial_safe_y_nonoise)
+    np.save("h_trial_nonoise",h_trial)
+
+    # plot
+
+
+    # # Plot robot trajectories
+    # plt.figure()
     
-    # plt.plot(state_hist_x_trial, state_hist_y_trial)
-    plot_h(np.atleast_2d(obs_loc).T)  # plot safe set
-    plt.scatter(state_hist_x_trial, state_hist_y_trial, c=h_trial < 0, s=1)
-    # print(state_hist_x_trial.shape)
+    # plt.plot(state_hist_x_trial, state_hist_y_trial) # Plot trajectories
+    # plot_h(np.atleast_2d(obs_loc).T)  # plot safe set
+    # # plt.scatter(state_hist_x_trial, state_hist_y_trial, c=h_trial < 0, s=1) # plot crashes
+    # # print(state_hist_x_trial.shape)
 
     
 
     # plt.figure()
-    # plt.scatter(range(len(h_trial)), h_trial, c=h_trial<0)
+    # # plt.scatter(range(num_it), h_trial, c=h_trial<0)
+    # plt.plot(h_trial)
     # plt.plot(np.zeros_like(h_trial),'k--')
-    plt.show()
+    # plt.show()
 
     
 
