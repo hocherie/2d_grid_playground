@@ -27,43 +27,23 @@ class ECBF_control():
         self.state["x"] += self.noise_x  # position
         # TODO: do for velocity too?
 
-    def compute_h(self, obs=np.array([[0], [0]]).T):
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        # TODO: a, safety_dist, obs, b
-        hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
-        return hr
-
-    def compute_hd(self, obs):
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        rd = np.atleast_2d(self.state["xdot"][:2]).T
-        term1 = (4 * np.power(rel_r[0],3) * rd[0])/(np.power(a,4))
-        term2 = (4 * np.power(rel_r[1],3) * rd[1])/(np.power(b,4))
-        return term1+term2
-
-    def compute_A(self, obs):
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        A0 = (4 * np.power(rel_r[0], 3))/(np.power(a, 4))
-        A1 = (4 * np.power(rel_r[1], 3))/(np.power(b, 4))
-
-        return np.array([np.hstack((A0, A1))])
-
     def compute_h_hd(self, obs):
         h = self.compute_h(obs)
         hd = self.compute_hd(obs)
 
         return np.vstack((h, hd)).astype(np.double)
 
-    def compute_b(self, obs):
-        """extra + K * [h hd]"""
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        rd = np.array(np.array(self.state["xdot"])[:2])
-        extra = -(
-            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
-            (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
-        )
+    def compute_h(self, obs):
+        return self.compute_h_superellip(obs)
 
-        b_ineq = extra - self.K @ self.compute_h_hd(obs)
-        return b_ineq
+    def compute_hd(self, obs):
+        return self.compute_hd_superellip(obs)
+
+    def compute_A(self,obs):
+        return self.compute_A_superellip(obs)
+
+    def compute_b(self,obs):
+        return self.compute_b_ellip(obs)
 
     def compute_safe_control(self,obs):
         if self.use_safe:
@@ -101,13 +81,53 @@ class ECBF_control():
             u_nom = (u_nom/np.linalg.norm(u_nom))* 0.01
         return u_nom.astype(np.double)
 
+        
+    # Superellipsoid-specific functions
+    def compute_h_superellip(self, obs):
+        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+        # TODO: a, safety_dist, obs, b
+        hr = h_func(rel_r[0], rel_r[1], a, b, safety_dist)
+        return hr
+
+    def compute_hd_superellip(self, obs):
+        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+        rd = np.atleast_2d(self.state["xdot"][:2]).T
+        term1 = (4 * np.power(rel_r[0],3) * rd[0])/(np.power(a,4))
+        term2 = (4 * np.power(rel_r[1],3) * rd[1])/(np.power(b,4))
+        return term1+term2
+
+    def compute_A_superellip(self, obs):
+        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+        A0 = (4 * np.power(rel_r[0], 3))/(np.power(a, 4))
+        A1 = (4 * np.power(rel_r[1], 3))/(np.power(b, 4))
+
+        return np.array([np.hstack((A0, A1))])
+
+
+    def compute_b_ellip(self, obs):
+        """extra + K * [h hd]"""
+        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+        rd = np.array(np.array(self.state["xdot"])[:2])
+        extra = -(
+            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
+            (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
+        )
+
+        b_ineq = extra - self.K @ self.compute_h_hd(obs)
+        return b_ineq
+
+
+
 @np.vectorize
-def h_func(r1, r2, a, b, safety_dist):
+def h_func_superellip(r1, r2, a, b, safety_dist):
     hr = np.power(r1,4)/np.power(a, 4) + \
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
-def plot_h(obs):
+def h_func(r1, r2, a, b, safety_dist):
+    return h_func_superellip(r1, r2, a, b, safety_dist)
+
+def plot_h(obs, h_func=h_func_superellip):
 
     plot_x = np.arange(-10, 10, 0.1)
     plot_y = np.arange(-10, 10, 0.1)
