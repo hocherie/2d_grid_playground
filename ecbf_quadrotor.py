@@ -68,8 +68,6 @@ class ECBF_control():
 
 
             optimized_u = sol['x']
-            np.random.seed()
-            # optimized_u += np.random.random()*np.linalg.norm(optimized_u)
 
         else:
             optimized_u = self.compute_nom_control()
@@ -181,13 +179,16 @@ def h_func_box(r1, r2, a, b, safety_dist):
 def h_func(r1, r2, a, b, safety_dist):
     return h_func_box(r1, r2, a, b, safety_dist)
 
-def plot_h(obs, h_func=h_func_box2):
+def plot_h(obs, num_h, h_func=h_func_box):
 
     plot_x = np.arange(-10, 10, 0.1)
     plot_y = np.arange(-10, 10, 0.1)
     xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
-    z = h_func(xx, yy, a, b, safety_dist) > 0
-    h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
+    z = h_func(xx, yy, a, b, safety_dist) 
+    z = np.reshape(z, (2,200, 200))
+    z = z > 0
+    z = np.all(z,axis=0)
+    h = plt.contour(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.pause(0.00000001)
@@ -200,7 +201,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
-
+    num_h = 2
     noise_x = np.zeros(3) # keeps track of noise for random walk
 
     # Loop through iterations
@@ -236,7 +237,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
             plt.xlim([-10, 10])
             plt.ylim([-10, 10])
-            plot_h(new_obs)
+            plot_h(new_obs, num_h)
 
 
     return np.array(state_hist), h_hist
