@@ -85,7 +85,7 @@ class ECBF_control():
         if np.linalg.norm(u_nom) > 1:
             u_nom = (u_nom/np.linalg.norm(u_nom))
 
-        u_nom = np.array([0.2, 0])
+        u_nom = np.array([0.02, 0.005])
         return u_nom.astype(np.double)
 
     # Box-specific functions
@@ -138,17 +138,17 @@ class ECBF_control():
     #     return np.array([np.hstack((A0, A1))])
 
 
-    def compute_b_ellip(self, obs):
-        """extra + K * [h hd]"""
-        rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
-        rd = np.array(np.array(self.state["xdot"])[:2])
-        extra = -(
-            (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
-            (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
-        )
+    # def compute_b_ellip(self, obs):
+    #     """extra + K * [h hd]"""
+    #     rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
+    #     rd = np.array(np.array(self.state["xdot"])[:2])
+    #     extra = -(
+    #         (12 * np.square(rel_r[0]) * np.square(rd[0]))/np.power(a,4) +
+    #         (12 * np.square(rel_r[1]) * np.square(rd[1]))/np.power(b, 4)
+    #     )
 
-        b_ineq = extra - self.K @ self.compute_h_hd(obs)
-        return b_ineq
+    #     b_ineq = extra - self.K @ self.compute_h_hd(obs)
+    #     return b_ineq
 
 
 
@@ -230,7 +230,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
                       nom_cont[0]],
                      [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
-
+            plt.legend(["Safe", "Nominal"])
             plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'b')
             plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
