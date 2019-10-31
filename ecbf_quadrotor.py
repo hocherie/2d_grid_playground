@@ -13,8 +13,8 @@ class ECBF_control():
     def __init__(self, state, goal=np.array([[0], [10]])):
         self.state = state
         self.shape_dict = {}
-        Kp = 3
-        Kd = 4
+        Kp = 4
+        Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.use_safe = True
@@ -27,23 +27,27 @@ class ECBF_control():
         self.state["x"] += self.noise_x  # position
         # TODO: do for velocity too?
 
-    def compute_h_hd(self, obs):
-        h = self.compute_h(obs)
-        hd = self.compute_hd(obs)
+    def compute_h_hd(self):
+        h = self.compute_h()
+        hd = self.compute_hd()
 
         return np.vstack((h, hd)).astype(np.double)
 
-    def compute_h(self, obs):
-        return self.compute_h_superellip(obs)
+    def compute_h(self, obs=None):
+        # return self.compute_h_superellip(obs)
+        return self.compute_h_box()
 
-    def compute_hd(self, obs):
-        return self.compute_hd_superellip(obs)
+    def compute_hd(self, obs=None):
+        # return self.compute_hd_superellip(obs)
+        return self.compute_hd_box()
 
-    def compute_A(self,obs):
-        return self.compute_A_superellip(obs)
+    def compute_A(self,obs=None):
+        # return self.compute_A_superellip(obs)
+        return self.compute_A_box()
 
-    def compute_b(self,obs):
-        return self.compute_b_ellip(obs)
+    def compute_b(self,obs=None):
+        # return self.compute_b_ellip(obs)
+        return self.compute_b_box()
 
     def compute_safe_control(self,obs):
         if self.use_safe:
@@ -77,11 +81,29 @@ class ECBF_control():
         vd = Kn[0]*(np.atleast_2d(self.state["x"][:2]).T - self.goal)
         u_nom = Kn[1]*(np.atleast_2d(self.state["xdot"][:2]).T - vd)
 
-        if np.linalg.norm(u_nom) > 0.01:
-            u_nom = (u_nom/np.linalg.norm(u_nom))* 0.01
+        if np.linalg.norm(u_nom) > 1:
+            u_nom = (u_nom/np.linalg.norm(u_nom))
         return u_nom.astype(np.double)
 
-        
+    # Box-specific functions
+    def compute_h_box(self):
+        hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist)
+        return hr
+    
+    def compute_hd_box(self):
+        hd = -self.state["xdot"][1]
+        return hd
+
+    def compute_A_box(self):
+        A = np.array([[0], [-1]]).T
+        return A
+
+    def compute_b_box(self):
+        # print
+        b_ineq = -self.K @ self.compute_h_hd()
+
+        return b_ineq     
+
     # Superellipsoid-specific functions
     def compute_h_superellip(self, obs):
         rel_r = np.atleast_2d(self.state["x"][:2]).T - obs
@@ -124,10 +146,20 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
-def h_func(r1, r2, a, b, safety_dist):
-    return h_func_superellip(r1, r2, a, b, safety_dist)
+@np.vectorize
+def h_func_box(r1, r2, a, b, safety_dist):
+    #! start with one line (positive y)
+    r_max = 5
+    laser_angle = np.radians(0) 
+    hr = (r_max - r2) - safety_dist # bound on max y
+    return hr
+    # pass
 
-def plot_h(obs, h_func=h_func_superellip):
+
+def h_func(r1, r2, a, b, safety_dist):
+    return h_func_box(r1, r2, a, b, safety_dist)
+
+def plot_h(obs, h_func=h_func_box):
 
     plot_x = np.arange(-10, 10, 0.1)
     plot_y = np.arange(-10, 10, 0.1)
@@ -176,18 +208,20 @@ def run_trial(state, obs_loc,goal, num_it, variance):
                       nom_cont[0]],
                      [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
 
-            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
+            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'b')
             plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
-
+            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
+            plt.xlim([-10, 10])
+            plt.ylim([-10, 10])
             plot_h(new_obs)
+
 
     return np.array(state_hist), h_hist
 
 def main():
 
     #! Experiment Variables
-    num_it = 5000
+    num_it = 50000
     num_variance = 1
     num_trials = 1
 
