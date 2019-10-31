@@ -17,7 +17,7 @@ class ECBF_control():
         Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
-        self.laser_angle = np.radians([45, 90])
+        self.laser_angle = laser_angle
         self.num_h = self.laser_angle.shape[0]
         self.use_safe = True
         # noise terms
@@ -85,7 +85,7 @@ class ECBF_control():
         if np.linalg.norm(u_nom) > 1:
             u_nom = (u_nom/np.linalg.norm(u_nom))
 
-        u_nom = np.array([0.02, 0.005])
+        # u_nom = np.array([0.02, 0.005])
         return u_nom.astype(np.double)
 
     # Box-specific functions
@@ -218,8 +218,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
     dyn = QuadDynamics()
-    num_h = 2
-    laser_angle = np.radians([45,90])
+    num_h = 4
+    laser_angle = np.radians([270,90])#np.radians([45])
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
