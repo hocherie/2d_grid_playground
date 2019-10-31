@@ -219,7 +219,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     # Initialize necessary classes
     dyn = QuadDynamics()
     num_h = 4
-    laser_angle = np.radians([270,90])#np.radians([45])
+    laser_angle = np.radians([0,30])#np.radians([45])
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
