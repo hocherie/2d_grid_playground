@@ -144,6 +144,23 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         # ecbf.add_state_noise(variance) # Add noise here
         state_hist.append(state["x"]-noise_x) # append true state
         h_hist[tt] = ecbf.compute_h(new_obs)
+        if(tt % 100 == 0):
+            print(tt)
+            plt.cla()
+            state_hist_plot = np.array(state_hist)
+            nom_cont = ecbf.compute_nom_control()
+            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+                      u_hat_acc[0]],
+                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
+            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+                      nom_cont[0]],
+                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
+
+            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'k')
+            plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*k') # current
+
+            plot_h(new_obs)
 
     return np.array(state_hist), h_hist
 
@@ -151,8 +168,8 @@ def main():
 
     #! Experiment Variables
     num_it = 5000
-    num_variance = 3
-    num_trials = 10
+    num_variance = 1
+    num_trials = 1
 
     # Initialize result arrays
     state_hist_x_trials = np.zeros((num_it, num_variance))
@@ -189,43 +206,24 @@ def main():
             state_hist, h_hist = run_trial(
                 state, obs_loc, goal, num_it, variance=0.0001*variance_i)
             # Add trial results to list
-            state_hist_x_trial[:, trial] = state_hist[:, 0]
-            state_hist_y_trial[:, trial] = state_hist[:, 1]
-            h_trial[:,trial] = h_hist
+            # state_hist_x_trial[:, trial] = state_hist[:, 0]
+            # state_hist_y_trial[:, trial] = state_hist[:, 1]
+            # h_trial[:,trial] = h_hist
 
-        # Calculate mean and variance for all trials
-        h_trial_mean = np.mean(h_trial, 1)
-        # print(h_trial_mean.shape)
-        # assert(h_trial_mean.shape == (num_it, 1))
-        h_trial_var = np.std(h_trial, 1)
+        # # Calculate mean and variance for all trials
+        # h_trial_mean = np.mean(h_trial, 1)
+        # # print(h_trial_mean.shape)
+        # # assert(h_trial_mean.shape == (num_it, 1))
+        # h_trial_var = np.std(h_trial, 1)
 
         # Assign mean/variance trial to variance list
         
-        h_trial_mean_list[:, variance_i] = np.copy(h_trial_mean)
-        h_trial_var_list[:, variance_i] = np.copy(h_trial_var)
+    #     h_trial_mean_list[:, variance_i] = np.copy(h_trial_mean)
+    #     h_trial_var_list[:, variance_i] = np.copy(h_trial_var)
 
-    np.save("h_trial_mean_list", h_trial_mean_list)
-    np.save("h_trial_var_list", h_trial_var_list)
-    # Plot metrics over time
-    # plt.plot(range(num_it), h_trial_mean_list)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:,0] -
-    #                  h_trial_var_list[:, 0], h_trial_mean_list[:, 0]+h_trial_var_list[:, 0], color='blue', alpha=0.2)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:, 1] -
-    #     h_trial_var_list[:, 1], h_trial_mean_list[:, 1]+h_trial_var_list[:, 1], color='orange', alpha=0.2)
-    # plt.fill_between(range(num_it), h_trial_mean_list[:, 2] -
-    #                  h_trial_var_list[:, 2], h_trial_mean_list[:, 2]+h_trial_var_list[:, 2], color='green', alpha=0.2)
-    # plt.xlabel("Time")
-    # plt.ylabel("h")
-    # plt.title("h")
-    # plt.legend(["1","2","3"])
-    # plt.ylim((-5,5)) # highlight if violate safety
+    # np.save("h_trial_mean_list", h_trial_mean_list)
+    # np.save("h_trial_var_list", h_trial_var_list)
 
-    # # Plot vehicle trajectories
-    # plt.figure()
-    # plt.plot(state_hist_x_trials, state_hist_y_trials)
-    # plot_h(np.atleast_2d(obs_loc).T)
-    
-    # plt.show()
 
 
 
