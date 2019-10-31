@@ -10,14 +10,15 @@ b = 1
 safety_dist = 1 # TODO: change
 
 class ECBF_control():
-    def __init__(self, state, goal=np.array([[10], [0]]), num_h=1):
+    def __init__(self, state, goal=np.array([[10], [0]]), laser_angle=np.radians([0,0])):
         self.state = state
         self.shape_dict = {}
         Kp = 4
         Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
-        self.num_h = num_h
+        self.laser_angle = np.radians([45, 90])
+        self.num_h = self.laser_angle.shape[0]
         self.use_safe = True
         # noise terms
         self.noise_x = np.zeros((3,))
@@ -89,20 +90,28 @@ class ECBF_control():
 
     # Box-specific functions
     def compute_h_box(self):
-        hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist)
+        hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist, self.laser_angle)
         assert(hr.shape==(self.num_h,1))
         return hr
     
     def compute_hd_box(self):
-        hd1 = -self.state["xdot"][1]
-        hd2 = -self.state["xdot"][0]
+        # TODO: confirm sign
+        h = np.empty((0,1))
+        for i in range(self.num_h):
+            h = np.vstack((h, -np.sin(self.laser_angle[i])*self.state["xdot"][0] - np.cos(self.laser_angle[i])*self.state["xdot"][1]))
+        return h
+        # hd1 = -self.state["xdot"][1]
+        # hd2 = -self.state["xdot"][0]
 
-        hd = np.vstack((hd1, hd2))
+        # hd = np.vstack((hd1, hd2))
         assert(hd.shape==(self.num_h,1))
         return hd
 
     def compute_A_box(self):
-        A = np.array([[0, -1], [-1, 0]])
+        A = np.empty((0,2))
+        for i in range(self.num_h):
+            A = np.vstack((A, np.array([-np.sin(self.laser_angle[i]), -np.cos(self.laser_angle[i])])))
+        # A = np.array([[0, -1], [-1, 0]])
         assert(A.shape==(self.num_h,2))
         # A2 = np.array()
         return A
@@ -171,10 +180,10 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
 #     hr2 = (r_max - r1) - safety_dist # bound on max y
 #     return hr2
 
-def h_func_box(r1, r2, a, b, safety_dist):
-    num_h = 2
+def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
+    # print("hf", laser_angle)
+    num_h = laser_angle.shape[0]
     r_max = 5
-    laser_angle = np.radians([0,90])
     if r1.shape == ():
         h = np.zeros((num_h, 1))
         
@@ -188,16 +197,16 @@ def h_func_box(r1, r2, a, b, safety_dist):
             h = np.vstack((h, np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist))
     return h
 
-def h_func(r1, r2, a, b, safety_dist):
-    return h_func_box(r1, r2, a, b, safety_dist)
+def h_func(r1, r2, a, b, safety_dist, laser_angle):
+    return h_func_box(r1, r2, a, b, safety_dist, laser_angle)
 
-def plot_h(obs, num_h, h_func=h_func_box):
+def plot_h(obs, laser_angle, h_func=h_func_box):
 
     plot_x = np.arange(-10, 10, 0.1)
     plot_y = np.arange(-10, 10, 0.1)
     xx, yy = np.meshgrid(plot_x, plot_y, sparse=True)
-    z = h_func(xx, yy, a, b, safety_dist) 
-    z = np.reshape(z, (2,200, 200))
+    z = h_func_box(xx, yy, a, b, safety_dist, laser_angle) 
+    z = np.reshape(z, (laser_angle.shape[0],200, 200))
     z = z > 0
     z = np.all(z,axis=0)
     h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
@@ -210,7 +219,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     # Initialize necessary classes
     dyn = QuadDynamics()
     num_h = 2
-    ecbf = ECBF_control(state=state,goal=goal, num_h=num_h)
+    laser_angle = np.radians([45,90])
+    ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
@@ -245,7 +255,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
             plt.xlim([-10, 10])
             plt.ylim([-10, 10])
-            plot_h(new_obs, num_h)
+            plot_h(new_obs, laser_angle, num_h)
 
 
     return np.array(state_hist), h_hist
