@@ -10,13 +10,14 @@ b = 1
 safety_dist = 1 # TODO: change
 
 class ECBF_control():
-    def __init__(self, state, goal=np.array([[10], [0]])):
+    def __init__(self, state, goal=np.array([[10], [0]]), num_h=1):
         self.state = state
         self.shape_dict = {}
         Kp = 4
         Kd = 3
         self.K = np.array([Kp, Kd])
         self.goal=goal
+        self.num_h = num_h
         self.use_safe = True
         # noise terms
         self.noise_x = np.zeros((3,))
@@ -53,7 +54,7 @@ class ECBF_control():
     def compute_safe_control(self,obs):
         if self.use_safe:
             A = self.compute_A(obs)
-            assert(A.shape == (2,2))
+            assert(A.shape == (self.num_h,2))
 
             b_ineq = self.compute_b(obs)
 
@@ -89,7 +90,7 @@ class ECBF_control():
     # Box-specific functions
     def compute_h_box(self):
         hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist)
-        assert(hr.shape==(2,1))
+        assert(hr.shape==(self.num_h,1))
         return hr
     
     def compute_hd_box(self):
@@ -97,12 +98,12 @@ class ECBF_control():
         hd2 = -self.state["xdot"][0]
 
         hd = np.vstack((hd1, hd2))
-        assert(hd.shape==(2,1))
+        assert(hd.shape==(self.num_h,1))
         return hd
 
     def compute_A_box(self):
         A = np.array([[0, -1], [-1, 0]])
-        assert(A.shape==(2,2))
+        assert(A.shape==(self.num_h,2))
         # A2 = np.array()
         return A
 
@@ -111,7 +112,7 @@ class ECBF_control():
         # print("hhd", self.compute_h_hd().shape)
         b_ineq = - self.compute_h_hd() @ np.atleast_2d(self.K).T
         # print(b_ineq.shape)
-        assert(b_ineq.shape==(2,1))
+        assert(b_ineq.shape==(self.num_h,1))
         return b_ineq     
 
     # # Superellipsoid-specific functions
@@ -156,24 +157,35 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
-@np.vectorize
-def h_func_box1(r1, r2, a, b, safety_dist):
-    #! (positive y)
-    r_max = 5
-    hr1 = (r_max - r2) - safety_dist # bound on max y
-    return hr1
+# @np.vectorize
+# def h_func_box1(r1, r2, a, b, safety_dist):
+#     #! (positive y)
+#     r_max = 5
+#     hr1 = (r_max - r2) - safety_dist # bound on max y
+#     return hr1
 
-@np.vectorize
-def h_func_box2(r1, r2, a, b, safety_dist):
-    #! (positive x)
-    r_max = 5
-    hr2 = (r_max - r1) - safety_dist # bound on max y
-    return hr2
+# @np.vectorize
+# def h_func_box2(r1, r2, a, b, safety_dist):
+#     #! (positive x)
+#     r_max = 5
+#     hr2 = (r_max - r1) - safety_dist # bound on max y
+#     return hr2
 
 def h_func_box(r1, r2, a, b, safety_dist):
-    # return (#set, 1) matrix
-    h = np.vstack((h_func_box1(r1, r2, a, b, safety_dist), h_func_box2(r1, r2, a, b, safety_dist)))
-    # print(h.shape)
+    num_h = 2
+    r_max = 5
+    laser_angle = np.radians([0,90])
+    if r1.shape == ():
+        h = np.zeros((num_h, 1))
+        
+        for i in range(num_h):
+            h_i = np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist
+            # print(np.cos(laser_angle) * (r_max-r2) )
+            h[i] = h_i 
+    else:
+        h = np.empty((0,200))
+        for i in range(num_h):
+            h = np.vstack((h, np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist))
     return h
 
 def h_func(r1, r2, a, b, safety_dist):
@@ -188,7 +200,7 @@ def plot_h(obs, num_h, h_func=h_func_box):
     z = np.reshape(z, (2,200, 200))
     z = z > 0
     z = np.all(z,axis=0)
-    h = plt.contour(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
+    h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.pause(0.00000001)
@@ -197,11 +209,12 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
     dyn = QuadDynamics()
-    ecbf = ECBF_control(state=state,goal=goal)
+    num_h = 2
+    ecbf = ECBF_control(state=state,goal=goal, num_h=num_h)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
-    num_h = 2
+    
     noise_x = np.zeros(3) # keeps track of noise for random walk
 
     # Loop through iterations
@@ -213,17 +226,12 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         u_motor = go_to_acceleration(
             state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
         state = dyn.step_dynamics(state, u_motor)
-        # noise_x += (np.random.rand(3) - 0.5) * variance # add gaussian to random walk
-        # state["x"] += noise_x  # add noise to position position
         ecbf.state = state
-        # ecbf.add_state_noise(variance) # Add noise here
         state_hist.append(state["x"]) # append true state
-        # h_hist[tt] = ecbf.compute_h(new_obs)
         if(tt % 100 == 0):
             print(tt)
             plt.cla()
             state_hist_plot = np.array(state_hist)
-            # print("state_hist_plot size", state_hist_plot.shape)
             nom_cont = ecbf.compute_nom_control()
             plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
                       u_hat_acc[0]],
