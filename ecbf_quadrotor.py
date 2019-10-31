@@ -7,7 +7,7 @@ from cvxopt import solvers
 
 a = 1
 b = 1
-safety_dist = 1 # TODO: change
+safety_dist = 0 # TODO: change
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[10], [0]]), laser_angle=np.radians([0,0])):
@@ -166,20 +166,6 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
-# @np.vectorize
-# def h_func_box1(r1, r2, a, b, safety_dist):
-#     #! (positive y)
-#     r_max = 5
-#     hr1 = (r_max - r2) - safety_dist # bound on max y
-#     return hr1
-
-# @np.vectorize
-# def h_func_box2(r1, r2, a, b, safety_dist):
-#     #! (positive x)
-#     r_max = 5
-#     hr2 = (r_max - r1) - safety_dist # bound on max y
-#     return hr2
-
 def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
     # print("hf", laser_angle)
     num_h = laser_angle.shape[0]
@@ -188,13 +174,16 @@ def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
         h = np.zeros((num_h, 1))
         
         for i in range(num_h):
-            h_i = np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist
+            li = laser_angle[i]
+            h_i = -np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
+            # h_i = np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist
             # print(np.cos(laser_angle) * (r_max-r2) )
             h[i] = h_i 
     else:
         h = np.empty((0,200))
         for i in range(num_h):
-            h = np.vstack((h, np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist))
+            li = laser_angle[i]
+            h = np.vstack((h, -np.sin(li)*r1 - np.cos(li)*r2 + r_max -safety_dist))
     return h
 
 def h_func(r1, r2, a, b, safety_dist, laser_angle):
@@ -218,8 +207,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
     dyn = QuadDynamics()
-    num_h = 4
-    laser_angle = np.radians([0,30])#np.radians([45])
+    # num_h = 4
+    laser_angle = np.radians(np.arange(12)*360/12)  # np.radians([45])
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
@@ -255,7 +244,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
             plt.xlim([-10, 10])
             plt.ylim([-10, 10])
-            plot_h(new_obs, laser_angle, num_h)
+            plot_h(new_obs, laser_angle)
 
 
     return np.array(state_hist), h_hist
@@ -288,7 +277,7 @@ def main():
             # goal_y = np.random.rand() + 10
             x_start_tr = 0.5 #! Mock, test near obstacle
             y_start_tr = -4
-            goal_x = 0.5
+            goal_x = 7.5
             goal_y = 10
             goal = np.array([[goal_x], [goal_y]])
             state = {"x": np.array([x_start_tr, y_start_tr, 10]),
