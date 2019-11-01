@@ -11,7 +11,7 @@ import random
 
 a = 1
 b = 1
-safety_dist = 0 # TODO: change
+safety_dist = 20 # TODO: change
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[10], [0]]), laser_angle=np.radians([0,0])):
@@ -40,9 +40,9 @@ class ECBF_control():
         # print("hd shape", hd.shape)
         return np.hstack((h, hd)).astype(np.double)
 
-    def compute_h(self, obs=None):
+    def compute_h(self, obs=None,laser_range=None):
         # return self.compute_h_superellip(obs)
-        return self.compute_h_box()
+        return self.compute_h_box(laser_range)
 
     def compute_hd(self, obs=None):
         # return self.compute_hd_superellip(obs)
@@ -56,7 +56,7 @@ class ECBF_control():
         # return self.compute_b_ellip(obs)
         return self.compute_b_box()
 
-    def compute_safe_control(self,obs):
+    def compute_safe_control(self,obs, laser_range):
         if self.use_safe:
             A = self.compute_A(obs)
             assert(A.shape == (self.num_h,2))
@@ -93,8 +93,8 @@ class ECBF_control():
         return u_nom.astype(np.double)
 
     # Box-specific functions
-    def compute_h_box(self):
-        hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist, self.laser_angle)
+    def compute_h_box(self, laser_range):
+        hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist, self.laser_angle, laser_range)
         assert(hr.shape==(self.num_h,1))
         return hr
     
@@ -170,7 +170,7 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
         np.power(r2, 4)/np.power(b, 4) - safety_dist
     return hr
 
-def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
+def h_func_box(r1, r2, a, b, safety_dist, laser_angle, laser_range):
     # print("hf", laser_angle)
     num_h = laser_angle.shape[0]
     r_max = 10
@@ -179,7 +179,15 @@ def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
         
         for i in range(num_h):
             li = laser_angle[i]
-            h_i = -np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
+            
+            # if laser_range is None:
+            #     ri = 30 #! max_range
+            #     print("no laser range")
+            # else:
+            ri = laser_range[i]
+            print(ri)
+            h_i = ri - safety_dist #-np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
+            # h_i = -np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
             # h_i = np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist
             # print(np.cos(laser_angle) * (r_max-r2) )
             h[i] = h_i 
@@ -190,8 +198,8 @@ def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
             h = np.vstack((h, -np.sin(li)*r1 - np.cos(li)*r2 + r_max -safety_dist))
     return h
 
-def h_func(r1, r2, a, b, safety_dist, laser_angle):
-    return h_func_box(r1, r2, a, b, safety_dist, laser_angle)
+def h_func(r1, r2, a, b, safety_dist, laser_angle, laser_range):
+    return h_func_box(r1, r2, a, b, safety_dist, laser_angle, laser_range)
 
 def plot_h(obs, laser_angle, h_func=h_func_box):
 
@@ -202,7 +210,7 @@ def plot_h(obs, laser_angle, h_func=h_func_box):
     z = np.reshape(z, (laser_angle.shape[0],200, 200))
     z = z > 0
     z = np.all(z,axis=0)
-    h = plt.contour(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
+    h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"], alpha=0.25)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.pause(0.00000001)
@@ -218,18 +226,18 @@ def run_trial(state, obs_loc,goal, num_it, variance):
 
     # initialize robot (initializes lidar with map) 
     robbie = Robot(map1)
+    robbie.update(state)
     dyn = QuadDynamics()
-    laser_angle = np.radians(np.arange(12)*360/12)  # np.radians([45])
+    laser_angle = np.radians([0]) #np.radians(np.arange(12)*30) #np.radians([0])#np.radians(np.arange(12)*30)   #np.radians([90]) # 
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
     h_hist = np.zeros((num_it))
     
-    noise_x = np.zeros(3) # keeps track of noise for random walk
 
     # Loop through iterations
     for tt in range(num_it):
-        u_hat_acc = ecbf.compute_safe_control(obs=new_obs)
+        u_hat_acc = ecbf.compute_safe_control(obs=new_obs, laser_range=robbie.lidar.ranges)
         u_hat_acc = np.ndarray.flatten(
             np.array(np.vstack((u_hat_acc, np.zeros((1, 1))))))  # acceleration
         assert(u_hat_acc.shape == (3,))
@@ -238,11 +246,13 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"]) # append true state
-        if(tt % 100 == 0):
+        print(tt)
+        robbie.update(state)
+        if(tt % 20 == 0):
             print("Time " + str(tt))
             plt.cla()
             
-            robbie.update(state)
+            
             map1.visualize_map()
             robbie.visualize()
             plt.pause(0.1)
@@ -261,8 +271,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             # plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'b')
             # plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
             # plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
-            # plt.xlim([-10, 10])
-            # plt.ylim([-10, 10])
+            # plt.xlim([-100, 100])
+            # plt.ylim([-100, 100])
             # plot_h(new_obs, laser_angle)
 
 
@@ -294,10 +304,10 @@ def main():
             # y_start_tr = np.random.rand() - 4
             # goal_x = np.random.rand() * 5 - 2.5
             # goal_y = np.random.rand() + 10
-            x_start_tr = 0.5 #! Mock, test near obstacle
+            x_start_tr = 20 #! Mock, test near obstacle
             y_start_tr = 0
-            goal_x = 7.5
-            goal_y = 10
+            goal_x = 20
+            goal_y = 90
             goal = np.array([[goal_x], [goal_y]])
             state = {"x": np.array([x_start_tr, y_start_tr, 10]),
                         "xdot": np.zeros(3,),

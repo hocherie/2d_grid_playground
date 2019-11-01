@@ -20,7 +20,7 @@ SAFE_RANGE = 30
 
 class Robot():
     def __init__(self, map1, lidar=None, pos_cont=None, use_safe=True):
-        self.state = {"x": np.array([50, 10, 10]),
+        self.state = {"x": np.array([0.5, 0, 10]),
                       "xdot": np.zeros(3,),
                       "theta": np.radians(np.array([0, 0, 0])),  # ! hardcoded
                       "thetadot": np.radians(np.array([0, 0, 0]))
@@ -52,7 +52,7 @@ class Robot():
     def visualize(self):
         """Visualizes robot and lidar"""
         self.visualize_robot()
-        print(self.x, self.y)
+        print("Robot pos", self.x, self.y)
         self.lidar.visualize_lidar((self.x, self.y))
         self.pos_cont.visualize_control((self.x, self.y))
 
@@ -168,7 +168,8 @@ class PositionController():
         plt.legend()
 
 class LidarSimulator():
-    def __init__(self, map1, angles=np.array(range(10)) * 33): 
+    def __init__(self, map1, angles=np.arange(1)*30+90): 
+    #def __init__(self, map1, angles=np.arange(12)*30): 
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
         self.map = map1 #TODO: move to robot?
@@ -191,12 +192,14 @@ class LidarSimulator():
         closest_obs = [self.get_closest_obstacle(
             pos, angle + cur_yaw) for angle in self.angles]
         self.sensed_obs = np.array(closest_obs)
-
+        print("Sensed obs", self.sensed_obs)
+        
         self.ranges = self.get_ranges(pos)
+        print("Updating lidar reading", self.ranges)
 
     def get_ranges(self, pos):
         """Get ranges given sensed obstacles"""
-
+        print("getting range")
         ranges = []
         for obstacle in self.sensed_obs:
             if obstacle is None:
