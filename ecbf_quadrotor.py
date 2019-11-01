@@ -11,7 +11,7 @@ import random
 
 a = 1
 b = 1
-safety_dist = 20 # TODO: change
+safety_dist = 1 # TODO: change
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[10], [0]]), laser_angle=np.radians([0,0])):
@@ -33,8 +33,8 @@ class ECBF_control():
         self.state["x"] += self.noise_x  # position
         # TODO: do for velocity too?
 
-    def compute_h_hd(self):
-        h = self.compute_h()
+    def compute_h_hd(self, laser_range=None):
+        h = self.compute_h(laser_range=laser_range)
         hd = self.compute_hd()
         # print("h shape", h.shape)
         # print("hd shape", hd.shape)
@@ -42,6 +42,7 @@ class ECBF_control():
 
     def compute_h(self, obs=None,laser_range=None):
         # return self.compute_h_superellip(obs)
+        print("Comptue_h", laser_range)
         return self.compute_h_box(laser_range)
 
     def compute_hd(self, obs=None):
@@ -52,16 +53,15 @@ class ECBF_control():
         # return self.compute_A_superellip(obs)
         return self.compute_A_box()
 
-    def compute_b(self,obs=None):
+    def compute_b(self,obs=None, laser_range=None):
         # return self.compute_b_ellip(obs)
-        return self.compute_b_box()
+        return self.compute_b_box(laser_range)
 
     def compute_safe_control(self,obs, laser_range):
         if self.use_safe:
             A = self.compute_A(obs)
             assert(A.shape == (self.num_h,2))
-
-            b_ineq = self.compute_b(obs)
+            b_ineq = self.compute_b(obs, laser_range)
 
             #Make CVXOPT quadratic programming problem
             P = matrix(np.eye(2), tc='d')
@@ -94,6 +94,7 @@ class ECBF_control():
 
     # Box-specific functions
     def compute_h_box(self, laser_range):
+        print("comp_h_box", laser_range)
         hr = h_func(self.state["x"][0], self.state["x"][1], a, b, safety_dist, self.laser_angle, laser_range)
         assert(hr.shape==(self.num_h,1))
         return hr
@@ -120,10 +121,10 @@ class ECBF_control():
         # A2 = np.array()
         return A
 
-    def compute_b_box(self):
+    def compute_b_box(self, laser_range=None):
         # print("K", self.K.shape)
         # print("hhd", self.compute_h_hd().shape)
-        b_ineq = - self.compute_h_hd() @ np.atleast_2d(self.K).T
+        b_ineq = - self.compute_h_hd(laser_range) @ np.atleast_2d(self.K).T
         # print(b_ineq.shape)
         assert(b_ineq.shape==(self.num_h,1))
         return b_ineq     
@@ -199,6 +200,7 @@ def h_func_box(r1, r2, a, b, safety_dist, laser_angle, laser_range):
     return h
 
 def h_func(r1, r2, a, b, safety_dist, laser_angle, laser_range):
+    
     return h_func_box(r1, r2, a, b, safety_dist, laser_angle, laser_range)
 
 def plot_h(obs, laser_angle, h_func=h_func_box):
@@ -237,17 +239,22 @@ def run_trial(state, obs_loc,goal, num_it, variance):
 
     # Loop through iterations
     for tt in range(num_it):
+        print("Roobie", robbie.lidar.ranges)
+        # Get ECBF Control
         u_hat_acc = ecbf.compute_safe_control(obs=new_obs, laser_range=robbie.lidar.ranges)
         u_hat_acc = np.ndarray.flatten(
             np.array(np.vstack((u_hat_acc, np.zeros((1, 1))))))  # acceleration
         assert(u_hat_acc.shape == (3,))
         u_motor = go_to_acceleration(
             state, u_hat_acc, dyn.param_dict)  # desired motor rate ^2
+
+        # Step Dynamics and update state
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"]) # append true state
         print(tt)
         robbie.update(state)
+        # print("ranges",robbie.lidar.ranges)
         if(tt % 20 == 0):
             print("Time " + str(tt))
             plt.cla()
