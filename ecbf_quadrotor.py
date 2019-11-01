@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from cvxopt import matrix
 from cvxopt import solvers
 
+from simulator import Map, LidarSimulator, Robot
+import math
+import random
+
 a = 1
 b = 1
 safety_dist = 0 # TODO: change
@@ -169,7 +173,7 @@ def h_func_superellip(r1, r2, a, b, safety_dist):
 def h_func_box(r1, r2, a, b, safety_dist, laser_angle):
     # print("hf", laser_angle)
     num_h = laser_angle.shape[0]
-    r_max = 5
+    r_max = 10
     if r1.shape == ():
         h = np.zeros((num_h, 1))
         
@@ -198,7 +202,7 @@ def plot_h(obs, laser_angle, h_func=h_func_box):
     z = np.reshape(z, (laser_angle.shape[0],200, 200))
     z = z > 0
     z = np.all(z,axis=0)
-    h = plt.contourf(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
+    h = plt.contour(plot_x, plot_y, z, [-1, 0, 1], colors=["black","white"])
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.pause(0.00000001)
@@ -206,8 +210,15 @@ def plot_h(obs, laser_angle, h_func=h_func_box):
 def run_trial(state, obs_loc,goal, num_it, variance):
     """ Run 1 trial"""
     # Initialize necessary classes
+    print("start!!")
+
+    # load map
+    src_path_map = "data/two_obs.dat"
+    map1 = Map(src_path_map)
+
+    # initialize robot (initializes lidar with map) 
+    robbie = Robot(map1)
     dyn = QuadDynamics()
-    # num_h = 4
     laser_angle = np.radians(np.arange(12)*360/12)  # np.radians([45])
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
@@ -228,23 +239,31 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         ecbf.state = state
         state_hist.append(state["x"]) # append true state
         if(tt % 100 == 0):
-            print(tt)
+            print("Time " + str(tt))
             plt.cla()
-            state_hist_plot = np.array(state_hist)
-            nom_cont = ecbf.compute_nom_control()
-            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      u_hat_acc[0]],
-                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
-            plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
-                      nom_cont[0]],
-                     [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
-            plt.legend(["Safe", "Nominal"])
-            plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'b')
-            plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
-            plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
-            plt.xlim([-10, 10])
-            plt.ylim([-10, 10])
-            plot_h(new_obs, laser_angle)
+            
+            robbie.update(state)
+            map1.visualize_map()
+            robbie.visualize()
+            plt.pause(0.1)
+        
+            # print(tt)
+            # plt.cla()
+            # state_hist_plot = np.array(state_hist)
+            # nom_cont = ecbf.compute_nom_control()
+            # plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+            #           u_hat_acc[0]],
+            #          [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * u_hat_acc[1]], label="Safe")
+            # plt.plot([state_hist_plot[-1, 0], state_hist_plot[-1, 0] + 100 *
+            #           nom_cont[0]],
+            #          [state_hist_plot[-1, 1], state_hist_plot[-1, 1] + 100 * nom_cont[1]],label="Nominal")
+            # plt.legend(["Safe", "Nominal"])
+            # plt.plot(state_hist_plot[:, 0], state_hist_plot[:, 1],'b')
+            # plt.plot(ecbf.goal[0], ecbf.goal[1], '*r')
+            # plt.plot(state_hist_plot[-1, 0], state_hist_plot[-1, 1], '*b') # current
+            # plt.xlim([-10, 10])
+            # plt.ylim([-10, 10])
+            # plot_h(new_obs, laser_angle)
 
 
     return np.array(state_hist), h_hist
@@ -276,7 +295,7 @@ def main():
             # goal_x = np.random.rand() * 5 - 2.5
             # goal_y = np.random.rand() + 10
             x_start_tr = 0.5 #! Mock, test near obstacle
-            y_start_tr = -4
+            y_start_tr = 0
             goal_x = 7.5
             goal_y = 10
             goal = np.array([[goal_x], [goal_y]])

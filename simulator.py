@@ -52,27 +52,28 @@ class Robot():
     def visualize(self):
         """Visualizes robot and lidar"""
         self.visualize_robot()
+        print(self.x, self.y)
         self.lidar.visualize_lidar((self.x, self.y))
         self.pos_cont.visualize_control((self.x, self.y))
 
-    def move(self):
+    def move(self, new_state):
         self.hist_x.append(self.x)
         self.hist_y.append(self.y)
 
-        des_pos = np.array(
-            [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
-        u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
-        self.state = self.dynamics.step_dynamics(self.state, u)
-        self.x = self.state["x"][0]
-        self.y = self.state["x"][1]
+        # des_pos = np.array(
+        #     [self.x+self.pos_cont.u_x * 20, self.y+self.pos_cont.u_y * 20, 10]) #! TODO: make u_x reasonable
+        # u = go_to_position(self.state, des_pos, param_dict=self.dynamics.param_dict)
+        # self.state = self.dynamics.step_dynamics(self.state, u)
+        self.x = new_state["x"][0]
+        self.y = new_state["x"][1]
         
 
-    def update(self):
+    def update(self, new_state):
         """Moves robot and updates sensor readings"""
 
-        self.lidar.update_reading((self.x, self.y), self.state["theta"][2])
-        self.pos_cont.calc_control(self.use_safe)
-        self.move()
+        self.lidar.update_reading((new_state["x"][0], new_state["x"][1]), new_state["theta"][2])
+        # self.pos_cont.calc_control(self.use_safe)
+        self.move(new_state)
         
         
 
