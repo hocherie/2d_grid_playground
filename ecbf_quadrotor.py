@@ -11,14 +11,14 @@ import random
 
 a = 1
 b = 1
-safety_dist = 1 # TODO: change
+safety_dist = 2 # TODO: change
 
 class ECBF_control():
     def __init__(self, state, goal=np.array([[10], [0]]), laser_angle=np.radians([0,0])):
         self.state = state
         self.shape_dict = {}
-        Kp = 4
-        Kd = 3
+        Kp = 3
+        Kd = 4
         self.K = np.array([Kp, Kd])
         self.goal=goal
         self.laser_angle = laser_angle
@@ -42,7 +42,7 @@ class ECBF_control():
 
     def compute_h(self, obs=None,laser_range=None):
         # return self.compute_h_superellip(obs)
-        print("Comptue_h", laser_range)
+        # print("Comptue_h", laser_range)
         return self.compute_h_box(laser_range)
 
     def compute_hd(self, obs=None):
@@ -186,7 +186,7 @@ def h_func_box(r1, r2, a, b, safety_dist, laser_angle, laser_range):
             #     print("no laser range")
             # else:
             ri = laser_range[i]
-            print(ri)
+            # print(ri)
             h_i = ri - safety_dist #-np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
             # h_i = -np.sin(li)*r1 - np.cos(li)*r2 + r_max - safety_dist
             # h_i = np.sin(laser_angle[i])*(r_max-r1) + np.cos(laser_angle[i]) * (r_max-r2) - safety_dist
@@ -230,7 +230,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     robbie = Robot(map1)
     robbie.update(state)
     dyn = QuadDynamics()
-    laser_angle = np.radians(np.arange(4)*90) 
+    laser_angle = np.radians(np.arange(6)*60) 
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
@@ -239,7 +239,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
 
     # Loop through iterations
     for tt in range(num_it):
-        print("Roobie", robbie.lidar.ranges)
+        # print("Roobie", robbie.lidar.ranges)
         # Get ECBF Control
         u_hat_acc = ecbf.compute_safe_control(obs=new_obs, laser_range=robbie.lidar.ranges)
         u_hat_acc = np.ndarray.flatten(
@@ -252,7 +252,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
         state = dyn.step_dynamics(state, u_motor)
         ecbf.state = state
         state_hist.append(state["x"]) # append true state
-        print(tt)
+        # print(tt)
         robbie.update(state)
         # print("ranges",robbie.lidar.ranges)
         if(tt % 20 == 0):
@@ -289,61 +289,21 @@ def main():
 
     #! Experiment Variables
     num_it = 50000
-    num_variance = 1
-    num_trials = 1
 
-    # Initialize result arrays
-    state_hist_x_trials = np.zeros((num_it, num_variance))
-    state_hist_y_trials = np.zeros((num_it, num_variance))
-    # h_trials = np.zeros((num_it, num_variance))  # metric
-    h_trial_mean_list = np.zeros((num_it, num_variance))
-    h_trial_var_list = np.zeros((num_it, num_variance))
+    x_start_tr = 15 #! Mock, test near obstacle
+    y_start_tr = 20
+    goal_x = 70
+    goal_y = 90
+    goal = np.array([[goal_x], [goal_y]])
+    state = {"x": np.array([x_start_tr, y_start_tr, 10]),
+                "xdot": np.zeros(3,),
+                "theta": np.radians(np.array([0, 0, 0])), 
+                "thetadot": np.radians(np.array([0, 0, 0]))  
+                }
+    obs_loc = [0,0]
 
-
-    for variance_i in range(num_variance):
-        h_trial = np.zeros((num_it, num_trials))
-        state_hist_x_trial = np.zeros((num_it, num_trials))
-        state_hist_y_trial = np.zeros((num_it, num_trials))
-        for trial in range(num_trials):
-            #! Randomize trial variables. CHANGE!
-            print("Trial: ",trial)
-            # x_start_tr = np.random.rand()  # for randomizing start and goal
-            # y_start_tr = np.random.rand() - 4
-            # goal_x = np.random.rand() * 5 - 2.5
-            # goal_y = np.random.rand() + 10
-            x_start_tr = 20 #! Mock, test near obstacle
-            y_start_tr = 0
-            goal_x = 40
-            goal_y = 80
-            goal = np.array([[goal_x], [goal_y]])
-            state = {"x": np.array([x_start_tr, y_start_tr, 10]),
-                        "xdot": np.zeros(3,),
-                        "theta": np.radians(np.array([0, 0, 0])), 
-                        "thetadot": np.radians(np.array([0, 0, 0]))  
-                        }
-            obs_loc = [0,0]
-
-            # ! use 0.0001 * trial num as variance for now
-            state_hist, h_hist = run_trial(
-                state, obs_loc, goal, num_it, variance=0.0001*variance_i)
-            # Add trial results to list
-            # state_hist_x_trial[:, trial] = state_hist[:, 0]
-            # state_hist_y_trial[:, trial] = state_hist[:, 1]
-            # h_trial[:,trial] = h_hist
-
-        # # Calculate mean and variance for all trials
-        # h_trial_mean = np.mean(h_trial, 1)
-        # # print(h_trial_mean.shape)
-        # # assert(h_trial_mean.shape == (num_it, 1))
-        # h_trial_var = np.std(h_trial, 1)
-
-        # Assign mean/variance trial to variance list
-        
-    #     h_trial_mean_list[:, variance_i] = np.copy(h_trial_mean)
-    #     h_trial_var_list[:, variance_i] = np.copy(h_trial_var)
-
-    # np.save("h_trial_mean_list", h_trial_mean_list)
-    # np.save("h_trial_var_list", h_trial_var_list)
+    state_hist, h_hist = run_trial(
+        state, obs_loc, goal, num_it, variance=0)
 
 
 
