@@ -261,7 +261,8 @@ def run_trial(state, obs_loc,goal, num_it, variance):
             
             
             map1.visualize_map()
-            robbie.visualize()
+            nom_cont = ecbf.compute_nom_control()
+            robbie.visualize(nom_cont, u_hat_acc[:2])
             plt.pause(0.1)
         
             # print(tt)

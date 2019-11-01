@@ -49,12 +49,12 @@ class Robot():
         plt.plot(self.x, self.y, "*r")
         plt.plot(self.hist_x, self.hist_y, ".")
     
-    def visualize(self):
+    def visualize(self, og_control, safe_control):
         """Visualizes robot and lidar"""
         self.visualize_robot()
         print("Robot pos", self.x, self.y)
         self.lidar.visualize_lidar((self.x, self.y))
-        self.pos_cont.visualize_control((self.x, self.y))
+        self.pos_cont.visualize_control((self.x, self.y), og_control, safe_control)
 
     def move(self, new_state):
         self.hist_x.append(self.x)
@@ -153,18 +153,18 @@ class PositionController():
 
 
 
-    def visualize_control(self, pos):
+    def visualize_control(self, pos, og_control, safe_control):
         # original control
-        plt.plot([pos[0], pos[0]+self.og_control[0] * DISPSCALE],
-                 [pos[1], pos[1]+self.og_control[1] * DISPSCALE], 'g', label="Original")
+        plt.plot([pos[0], pos[0]+og_control[0] * DISPSCALE],
+                 [pos[1], pos[1]+og_control[1] * DISPSCALE], 'g', label="Original")
 
         # safe control
-        plt.plot([pos[0], pos[0]+self.safe_control[0] * DISPSCALE],
-                 [pos[1], pos[1]+self.safe_control[1] * DISPSCALE], 'r', label="Safe")
+        plt.plot([pos[0], pos[0]+safe_control[0] * DISPSCALE],
+                 [pos[1], pos[1]+safe_control[1] * DISPSCALE], 'r', label="Safe")
 
-        # final control
-        plt.plot([pos[0], pos[0]+self.u_x * DISPSCALE],
-                 [pos[1], pos[1]+self.u_y * DISPSCALE], 'b', label="Final")
+        # # final control
+        # plt.plot([pos[0], pos[0]+self.u_x * DISPSCALE],
+        #          [pos[1], pos[1]+self.u_y * DISPSCALE], 'b', label="Final")
         plt.legend()
 
 class LidarSimulator():
