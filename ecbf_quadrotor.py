@@ -230,7 +230,7 @@ def run_trial(state, obs_loc,goal, num_it, variance):
     robbie = Robot(map1)
     robbie.update(state)
     dyn = QuadDynamics()
-    laser_angle = np.radians([0]) #np.radians(np.arange(12)*30) #np.radians([0])#np.radians(np.arange(12)*30)   #np.radians([90]) # 
+    laser_angle = np.radians(np.arange(4)*90) 
     ecbf = ECBF_control(state=state,goal=goal, laser_angle=laser_angle)
     state_hist = []
     new_obs = np.atleast_2d(obs_loc).T
@@ -313,8 +313,8 @@ def main():
             # goal_y = np.random.rand() + 10
             x_start_tr = 20 #! Mock, test near obstacle
             y_start_tr = 0
-            goal_x = 20
-            goal_y = 90
+            goal_x = 40
+            goal_y = 80
             goal = np.array([[goal_x], [goal_y]])
             state = {"x": np.array([x_start_tr, y_start_tr, 10]),
                         "xdot": np.zeros(3,),

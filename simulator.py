@@ -168,8 +168,8 @@ class PositionController():
         plt.legend()
 
 class LidarSimulator():
-    def __init__(self, map1, angles=np.arange(1)*30+90): 
-    #def __init__(self, map1, angles=np.arange(12)*30): 
+    def __init__(self, map1, angles=-np.arange(4)*90+90): 
+    # def __init__(self, map1, angles=np.array([90])): 
         self.range_noise = 0.0
         self.angles = angles * np.pi/180. # list in deg
         self.map = map1 #TODO: move to robot?
